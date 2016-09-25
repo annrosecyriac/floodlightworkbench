@@ -2,10 +2,11 @@ package net.floodlightcontroller.hasupport;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Map;
 
-import org.zeromq.*;
+import org.zeromq.ZMQ;
 
 import net.floodlightcontroller.core.IFloodlightProviderService;
 import net.floodlightcontroller.core.module.FloodlightModuleContext;
@@ -21,26 +22,19 @@ public class HAController implements IFloodlightModule {
 	private static Logger logger = LoggerFactory.getLogger(HAController.class);
 	
 	public static void setSysPath(){
-		System.setProperty("java.library.path", "lib/");
-		System.setProperty("java.class.path", "lib/zmq.jar");
-		Field sysPathsField;
 		try {
-			sysPathsField = ClassLoader.class.getDeclaredField("sys_paths");
-			sysPathsField.setAccessible(true);
-		    sysPathsField.set(null, null);
-		} catch (NoSuchFieldException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		} catch (SecurityException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		} catch (IllegalArgumentException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IllegalAccessException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			final Field usrPathsField = ClassLoader.class.getDeclaredField("usr_paths");
+			usrPathsField.setAccessible(true);
+			final String[] path = (String[]) usrPathsField.get(null);
+			final String[] newPaths = Arrays.copyOf(path, path.length +2);
+			newPaths[newPaths.length - 2] = "lib/";
+			newPaths[newPaths.length - 1] = "lib/jzmq-3.1.0.jar";
+			usrPathsField.set(null, newPaths);		
+		} catch (NoSuchFieldException | SecurityException 
+				|  IllegalArgumentException |  IllegalAccessException e) {
+			logger.debug(new String(e.toString()));
 		}
+		
 		return;
 	}
 
@@ -105,4 +99,10 @@ public class HAController implements IFloodlightModule {
 		
 	}
 
+	public static void main(String[] args) {
+		setSysPath();
+		startServer();
+	}
+	
+	
 }
