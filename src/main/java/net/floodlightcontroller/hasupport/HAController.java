@@ -1,5 +1,6 @@
 package net.floodlightcontroller.hasupport;
 
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -7,6 +8,8 @@ import java.util.Collection;
 import java.util.Map;
 
 import org.zeromq.ZMQ;
+import org.zeromq.ZMQException;
+import org.zeromq.ZMQQueue;
 
 import net.floodlightcontroller.core.IFloodlightProviderService;
 import net.floodlightcontroller.core.module.FloodlightModuleContext;
@@ -20,6 +23,7 @@ import org.slf4j.LoggerFactory;
 public class HAController implements IFloodlightModule {
 
 	private static Logger logger = LoggerFactory.getLogger(HAController.class);
+	
 	
 	public static void setSysPath(){
 		try {
@@ -37,7 +41,6 @@ public class HAController implements IFloodlightModule {
 		
 		return;
 	}
-
 	
 	@Override
 	public Collection<Class<? extends IFloodlightService>> getModuleServices() {
@@ -70,13 +73,15 @@ public class HAController implements IFloodlightModule {
 	@Override
 	public void startUp(FloodlightModuleContext context) throws FloodlightModuleException {
 		// TODO Auto-generated method stub
+		QueueDevice qd = new QueueDevice();
+		qd.startQueue(4242, 5252);
 		startServer();
+		
 	}
 	
 	public static void startServer(){
 		
 		// Start: Simple ZMQ server
-		
 		ZMQ.Context zmqcontext = ZMQ.context(1);
 				
 		ZMQ.Socket responder = zmqcontext.socket(ZMQ.REP);
@@ -98,11 +103,5 @@ public class HAController implements IFloodlightModule {
 		}
 		
 	}
-
-	public static void main(String[] args) {
-		setSysPath();
-		startServer();
-	}
-	
 	
 }
