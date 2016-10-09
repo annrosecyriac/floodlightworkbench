@@ -8,15 +8,27 @@ import org.zeromq.ZMQ;
 import org.zeromq.ZMQException;
 import org.zeromq.ZMQQueue;
 
-public class QueueDevice {
+public class QueueDevice implements Runnable{
 
 	private static Logger logger = LoggerFactory.getLogger(QueueDevice.class);
 	
-	public void QueueDecice(){
-		
+	public final Integer serverPort;
+	public final Integer clientPort;
+	
+	public QueueDevice(int servePort, int clienPort) {
+		// TODO Auto-generated constructor stub
+		this.serverPort = servePort;
+		this.clientPort = clienPort;
+	}
+
+
+	public QueueDevice(Integer servePort,Integer clienPort){
+		this.serverPort = servePort;
+		this.clientPort = clienPort;
 	}
 	
-	public void startQueue(Integer serverPort,Integer clientPort) {
+	
+	public void startQueue() {
 		
 		try{
 			/**
@@ -29,7 +41,7 @@ public class QueueDevice {
 			 * to this node. (frontend)
 			 */
 			ZMQ.Socket clientSide = zmqcontext.socket(ZMQ.ROUTER);
-			clientSide.bind("tcp://0.0.0.0:"+clientPort.toString());
+			clientSide.bind("tcp://0.0.0.0:"+this.clientPort.toString());
 			
 			
 			/**
@@ -38,7 +50,7 @@ public class QueueDevice {
 			 * (backend)
 			 */
 			ZMQ.Socket serverSide = zmqcontext.socket(ZMQ.DEALER);
-			serverSide.bind("tcp://0.0.0.0:"+serverPort.toString());
+			serverSide.bind("tcp://0.0.0.0:"+this.serverPort.toString());
 			
 			logger.info("Starting ZMQueue device...");
 			
@@ -60,6 +72,13 @@ public class QueueDevice {
 			logger.debug("I/O exception occoured while trying to close QueueDevice"+ie.toString());
 			ie.printStackTrace();
 		}
+		
+	}
+
+	@Override
+	public void run() {
+		// TODO Auto-generated method stub
+		startQueue();
 		
 	}
 
