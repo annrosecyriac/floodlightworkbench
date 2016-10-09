@@ -51,10 +51,10 @@ public class AsyncElection implements Runnable{
 			network.blockUntilConnected();
 			n1.join();
 		} catch (InterruptedException ie){
-			logger.info("[Election] Was interrrupted! "+ie.toString());
+			logger.info("[Network] Was interrrupted! "+ie.toString());
 			ie.printStackTrace();
 		} catch (Exception e){
-			logger.info("[Election] Was interrrupted! "+e.toString());
+			logger.info("[Network] Was interrrupted! "+e.toString());
 			e.printStackTrace();
 		}
 	}

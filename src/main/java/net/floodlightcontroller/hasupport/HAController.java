@@ -74,8 +74,17 @@ public class HAController implements IFloodlightModule {
 	public void startUp(FloodlightModuleContext context) throws FloodlightModuleException {
 		// TODO Auto-generated method stub
 		//startServer();
-		Thread e1 = new Thread (new AsyncElection(), "ElectionThread");
-		e1.start();
+		try{
+			Thread e1 = new Thread (new AsyncElection(), "ElectionThread");
+			e1.start();
+			e1.join();
+		}  catch (InterruptedException ie){
+			logger.info("[Election] Was interrrupted! "+ie.toString());
+			ie.printStackTrace();
+		} catch (Exception e){
+			logger.info("[Election] Was interrrupted! "+e.toString());
+			e.printStackTrace();
+		}
 	}
 	
 	public static void startServer(){
