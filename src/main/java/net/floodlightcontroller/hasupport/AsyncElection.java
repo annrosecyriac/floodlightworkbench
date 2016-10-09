@@ -19,8 +19,21 @@ public class AsyncElection implements Runnable{
 	private static Logger logger = LoggerFactory.getLogger(AsyncElection.class);
 	public ZMQNode network = new ZMQNode(4242,5252,"1");
 	
-	public enum ElectionState{CONNECT,ELECT,COORDINATE,SPIN};
+	/**
+	 * Receiving values from the other nodes during an election.
+	 */
 	
+	String rcvdVal = new String();
+	String IWon    = new String();
+	
+	/**
+	 * Indicates who the current leader of the entire system is.
+	 */
+	
+	String leader  = new String();
+	String tempLeader = new String();
+	
+	public enum ElectionState{CONNECT,ELECT,COORDINATE,SPIN};
 	public ElectionState currentState = ElectionState.CONNECT;
 	
 	public AsyncElection(){
@@ -32,7 +45,8 @@ public class AsyncElection implements Runnable{
 		// TODO Auto-generated method stub
 		Thread n1 = new Thread (network, "ZMQThread");
 		n1.start();
-		logger.info("Network majority: "+network.majority.toString());		
+		logger.info("Network majority: "+network.majority.toString());
+		network.blockUntilConnected();
 	}
 
 	

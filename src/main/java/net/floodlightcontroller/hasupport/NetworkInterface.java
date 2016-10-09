@@ -1,7 +1,6 @@
 package net.floodlightcontroller.hasupport;
 
 import java.util.Map;
-import java.util.Set;
 
 /**
  * This interface acts as an abstraction between the actual
@@ -26,6 +25,7 @@ public interface NetworkInterface {
 	 */
 	
 	public enum netState{ON,OFF};
+	public enum ElectionState{CONNECT,ELECT,COORDINATE,SPIN};
 	
 	/**
 	 * This is the send function which is used to send a message from 
@@ -53,36 +53,36 @@ public interface NetworkInterface {
 	 * all the client nodes currently present in the connectSet and store the 
 	 * successfully connected clients in a dictionary called connectDict.
 	 * 
-	 * @param connectSet : A set that holds a list of the configured nodes 
-	 * 					   from the server configuration
-	 * @return           : HashMap which holds the <portnumber, state> of
-	 * 					   all the nodes.
+	 * connectSet : A set that holds a list of the configured nodes 
+	 * 			    from the server configuration
+	 * @return    : HashMap which holds the <portnumber, state> of
+	 * 			    all the nodes.
 	 */
 	
-	public Map<Integer, netState> connectClients(Set<Integer> connectSet);
+	public Map<Integer, netState> connectClients();
 	
 	/**
 	 * This function is used to TRY connecting to the nodes that are 
 	 * not yet connected but are present in the server configuration.
 	 * It updates the connectDict to reflect the current state of the underlying network.
 	 * 
-	 * @param connectDict : HashMap which holds the <portnumber, state> of
-	 * 					    all the nodes.
-	 * @return            : Updated copy of the connectDict
+	 * connectDict : HashMap which holds the <portnumber, state> of
+	 * 			     all the nodes.
+	 * @return     : Updated copy of the connectDict
 	 */
 	
-	public Map<Integer, netState> checkForNewConnections(Map<Integer, netState> connectDict);
+	public Map<Integer, netState> checkForNewConnections();
 	
 	/**
 	 * This function is used to test if the connections in the connectDict are
 	 * still active and expire stale connections from the connectDict.
 	 * 
-	 * @param connectDict : HashMap which holds the <portnumber, state> of
-	 * 					    all the nodes. 
-	 * @return            : Updated copy of the connectDict
+	 * connectDict : HashMap which holds the <portnumber, state> of
+	 * 			     all the nodes. 
+	 * @return     : Updated copy of the connectDict
 	 */
 	
-	public Map<Integer, netState> expireOldConnections(Map<Integer, netState> connectDict);
+	public Map<Integer, netState> expireOldConnections();
 	
 	/**
 	 * This function is used to spin in the CONNECT state of the election algorithm,
@@ -90,6 +90,10 @@ public interface NetworkInterface {
 	 * this state until the majority condition is satisfied.
 	 */
 	
-	public void blockUntilConnected();
+	public ElectionState blockUntilConnected();
+	
+	public void updateConnectDict();
+	
+	public Map<Integer, netState> getConnectDict();
 	
 }
