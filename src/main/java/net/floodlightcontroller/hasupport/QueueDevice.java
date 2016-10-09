@@ -66,11 +66,14 @@ public class QueueDevice implements Runnable{
 			zmqcontext.term();
 			
 		} catch (ZMQException ze){		
-			logger.debug("Zero MQ Exception occoured"+ze.toString());
+			logger.debug("Zero MQ Exception occoured "+ze.toString());
 			ze.printStackTrace();	
 		} catch (IOException ie){
-			logger.debug("I/O exception occoured while trying to close QueueDevice"+ie.toString());
+			logger.debug("I/O exception occoured while trying to close QueueDevice "+ie.toString());
 			ie.printStackTrace();
+		} catch (Exception e){
+			logger.debug("Exception occoured while trying to close QueueDevice "+e.toString());
+			e.printStackTrace();
 		}
 		
 	}

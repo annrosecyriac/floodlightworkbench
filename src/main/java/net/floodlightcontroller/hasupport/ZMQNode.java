@@ -3,7 +3,6 @@ package net.floodlightcontroller.hasupport;
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
-import java.nio.charset.Charset;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -411,9 +410,18 @@ public class ZMQNode implements NetworkInterface, Runnable {
 	@Override
 	public void run() {
 		// TODO Auto-generated method stub
-		logger.info("Server List: "+this.serverList.toString());
-		Thread t1 = new Thread(new QueueDevice(this.serverPort,this.clientPort), "QueueDeviceThread");
-		t1.start();
+		try{
+			logger.info("Server List: "+this.serverList.toString());
+			Thread t1 = new Thread(new QueueDevice(this.serverPort,this.clientPort), "QueueDeviceThread");
+			t1.start();
+			t1.join();
+		} catch (InterruptedException ie){
+			logger.info("Queue Device was interrupted! "+ie.toString());
+			ie.printStackTrace();
+		} catch (Exception e){
+			logger.info("Queue Device encountered an exception! "+e.toString());
+			e.printStackTrace();
+		}
 	}
 	
 	public Map<Integer, netState> getConnectDict(){

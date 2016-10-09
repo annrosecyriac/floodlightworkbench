@@ -43,15 +43,20 @@ public class AsyncElection implements Runnable{
 	@Override
 	public void run() {
 		// TODO Auto-generated method stub
-		Thread n1 = new Thread (network, "ZMQThread");
-		n1.start();
-		logger.info("Network majority: "+network.majority.toString());
-		network.getConnectDict();
-		network.blockUntilConnected();
+		try{
+			Thread n1 = new Thread (network, "ZMQThread");
+			n1.start();
+			logger.info("Network majority: "+network.majority.toString());
+			network.getConnectDict();
+			network.blockUntilConnected();
+			n1.join();
+		} catch (InterruptedException ie){
+			logger.info("[Election] Was interrrupted! "+ie.toString());
+			ie.printStackTrace();
+		} catch (Exception e){
+			logger.info("[Election] Was interrrupted! "+e.toString());
+			e.printStackTrace();
+		}
 	}
-
-	
-	
-	
 
 }
