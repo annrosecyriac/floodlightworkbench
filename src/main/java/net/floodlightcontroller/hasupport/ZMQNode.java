@@ -115,7 +115,7 @@ public class ZMQNode implements NetworkInterface, Runnable {
 			configFile.close();
 			
 		} catch (FileNotFoundException e){
-			logger.debug("This file was not found! Please place the server config file in the right location.");	
+			logger.info("This file was not found! Please place the server config file in the right location.");	
 		} catch(Exception e){
 			e.printStackTrace();
 		}
@@ -128,14 +128,23 @@ public class ZMQNode implements NetworkInterface, Runnable {
 		try{
 			clientSock.send(message);
 			return Boolean.TRUE;
-		} catch(ZMQException e){
-			clientSock.setLinger(0);
-			clientSock.close();
-			logger.debug("Send Failed: "+message+" not sent through port: "+clientPort);
+		} catch(ZMQException ze){
+			if(clientSock != null){
+				clientSock.setLinger(0);
+				clientSock.close();
+			}
+			logger.info("Send Failed: "+message+" not sent through port: "+clientPort.toString());
+			ze.printStackTrace();
+			return Boolean.FALSE;
+		} catch(Exception e){
+			if(clientSock != null){
+				clientSock.setLinger(0);
+				clientSock.close();
+			}
+			logger.info("Send Failed: "+message+" not sent through port: "+clientPort.toString());
 			e.printStackTrace();
 			return Boolean.FALSE;
 		}
-		
 	}
 
 	@Override
@@ -145,21 +154,27 @@ public class ZMQNode implements NetworkInterface, Runnable {
 		try{
 			byte[] msg = clientSock.recv(0);
 			return new String(msg);
-		} catch(ZMQException e){
-			clientSock.setLinger(0);
-			clientSock.close();
-			logger.debug("Recv Failed on port: "+receivingPort);
+		} catch(ZMQException ze){
+			if(clientSock != null){
+				clientSock.setLinger(0);
+				clientSock.close();
+			}
+			logger.info("Recv Failed on port: "+receivingPort.toString());
+			ze.printStackTrace();
+			return "";
+		} catch (Exception e){
+			if(clientSock != null){
+				clientSock.setLinger(0);
+				clientSock.close();
+			}
+			logger.info("Recv Failed on port: "+receivingPort.toString());
 			e.printStackTrace();
 			return "";
 		}
 		
 	}
-
-	@Override
-	public Map<Integer, netState> connectClients() {
-		// TODO Auto-generated method stub
-		logger.info("[Node] To Connect: "+this.connectSet.toString());
-		logger.info("[Node] Connected: "+this.socketDict.keySet().toString());
+	
+	public void doConnect(){
 		
 		HashSet<Integer> diffSet 		= new HashSet<Integer>();
 		HashSet<Integer> connectedNodes = new HashSet<Integer>();
@@ -171,7 +186,7 @@ public class ZMQNode implements NetworkInterface, Runnable {
 		diffSet.addAll(this.connectSet);
 		diffSet.removeAll(connectedNodes);
 		
-		logger.info("[Node] Diff Set of To Connect - Connected: "+diffSet.toString());
+		logger.info("[Node] New connections to look for (ConnectSet - Connected): "+diffSet.toString());
 		
 		
 		// Try connecting to all nodes that are in the diffSet and store the 
@@ -206,7 +221,7 @@ public class ZMQNode implements NetworkInterface, Runnable {
 				}
 				
 			} catch(NullPointerException ne){
-				logger.info("[Node] ConnectClients: Reply had a null value"+ne.toString());
+				logger.info("[Node] ConnectClients: Reply had a null value from: "+client.toString());
 				if(clientSock != null){
 					clientSock.setLinger(0);
 					clientSock.close();
@@ -217,18 +232,30 @@ public class ZMQNode implements NetworkInterface, Runnable {
 					clientSock.setLinger(0);
 					clientSock.close();
 				}
-				logger.info("[Node] ConnectClients errored out: "+ze.toString());
+				logger.info("[Node] ConnectClients errored out: "+client.toString());
 				ze.printStackTrace();
 			} catch (Exception e){
 				if(clientSock != null){
 					clientSock.setLinger(0);
 					clientSock.close();
 				}
-				logger.info("[Node] ConnectClients errored out: "+e.toString());
+				logger.info("[Node] ConnectClients errored out: "+client.toString());
 				e.printStackTrace();
 			} 
 			
 		}
+		
+		return;
+		
+	}
+
+	@Override
+	public Map<Integer, netState> connectClients() {
+		// TODO Auto-generated method stub
+		logger.info("[Node] To Connect: "+this.connectSet.toString());
+		logger.info("[Node] Connected: "+this.socketDict.keySet().toString());
+		
+		doConnect();
 		
 		//Delete the already connected connections from the ToConnect Set.
 		for(HashMap.Entry<Integer, ZMQ.Socket> entry: this.socketDict.entrySet()){
@@ -236,8 +263,7 @@ public class ZMQNode implements NetworkInterface, Runnable {
 				this.connectSet.remove(entry.getKey());
 				logger.info("Discarding already connected client: "+entry.getKey().toString());
 			}
-		}
-		
+		}	
 		updateConnectDict();
 		return (Map<Integer, netState>) Collections.unmodifiableMap(this.connectDict);
 	}
@@ -247,74 +273,8 @@ public class ZMQNode implements NetworkInterface, Runnable {
 		// TODO Auto-generated method stub
 		this.connectSet = new HashSet<Integer> (this.serverList);
 		
-		HashSet<Integer> diffSet 		= new HashSet<Integer>();
-		HashSet<Integer> connectedNodes = new HashSet<Integer>();
+		doConnect();
 		
-		for(HashMap.Entry<Integer, ZMQ.Socket> entry: this.socketDict.entrySet()){
-			connectedNodes.add(entry.getKey());
-		}
-		
-		diffSet.addAll(this.connectSet);
-		diffSet.removeAll(connectedNodes);
-		
-		logger.info("[Node] New connections to look for: "+diffSet.toString());
-		
-		
-		// Try connecting to all nodes that are in the diffSet and store the 
-		// successful ones in the  socketDict.
-		for (Integer client: diffSet){
-			ZMQ.Socket clientSock = zmqcontext.socket(ZMQ.REQ);
-			try{
-				clientSock.connect("tcp://127.0.0.1:"+client.toString());
-				//Set the socket timeouts for the current socket.
-				clientSock.setReceiveTimeOut(this.socketTimeout);
-				clientSock.setSendTimeOut(this.socketTimeout);
-				
-				clientSock.send("PULSE");
-				byte[] rep = clientSock.recv();
-				String reply = new String(rep);
-				if(reply.equals(new String("ACK"))){
-					logger.info("[Node] Client: "+client.toString()+"Client Sock: "+clientSock.toString());
-					if (!socketDict.containsKey(client)){
-						socketDict.put(client, clientSock);
-					} else {
-						logger.info("[Node] This socket already exists, refreshing: "+client.toString());
-						this.socketDict.get(client).setLinger(0);
-						this.socketDict.get(client).close();
-						this.socketDict.remove(client);
-						this.socketDict.put(client, clientSock);
-					}
-				} else {
-					logger.info("[Node] Received bad reply: "+client.toString());
-					clientSock.setLinger(0);
-					clientSock.close();
-					logger.info("[Node] Closed Socket"+client.toString());		
-				}
-				
-			} catch(NullPointerException ne){
-				logger.info("[Node] CheckNew: Reply had a null value"+ne.toString());
-				if(clientSock != null){
-					clientSock.setLinger(0);
-					clientSock.close();
-				}
-				//ne.printStackTrace();
-			} catch (ZMQException ze){
-				if(clientSock != null){
-					clientSock.setLinger(0);
-					clientSock.close();
-				}
-				logger.info("[Node] CheckNew errored out: "+ze.toString());
-				ze.printStackTrace();
-			} catch (Exception e){
-				if(clientSock != null){
-					clientSock.setLinger(0);
-					clientSock.close();
-				}
-				logger.info("[Node] CheckNew errored out: "+e.toString());
-				e.printStackTrace();
-			}
-			
-		}
 		updateConnectDict();
 		return (HashMap<Integer, netState>) Collections.unmodifiableMap(this.connectDict);
 	}
@@ -342,7 +302,7 @@ public class ZMQNode implements NetworkInterface, Runnable {
 				}
 				
 			} catch(NullPointerException ne){
-				logger.info("[Node] Expire: Reply had a null value"+ne.toString());
+				logger.info("[Node] Expire: Reply had a null value: "+entry.getKey().toString());
 				if(entry.getValue() != null){
 					entry.getValue().setLinger(0);
 					entry.getValue().close();
@@ -350,7 +310,7 @@ public class ZMQNode implements NetworkInterface, Runnable {
 				}
 				//ne.printStackTrace();
 			} catch(ZMQException ze){
-				logger.info("[Node] Expire: ZMQ socket error: "+ze.toString());
+				logger.info("[Node] Expire: ZMQ socket error: "+entry.getKey().toString());
 				if(entry.getValue() != null){
 					entry.getValue().setLinger(0);
 					entry.getValue().close();
@@ -358,7 +318,7 @@ public class ZMQNode implements NetworkInterface, Runnable {
 				}
 				ze.printStackTrace();
 			} catch (Exception e){
-				logger.info("[Node] Expire: Exception! : "+e.toString());
+				logger.info("[Node] Expire: Exception! : "+entry.getKey().toString());
 				if(entry.getValue() != null){
 					entry.getValue().setLinger(0);
 					entry.getValue().close();
@@ -397,7 +357,7 @@ public class ZMQNode implements NetworkInterface, Runnable {
 				delmark.put(entry.getKey(), entry.getValue());
 				
 			} catch(NullPointerException ne){
-				logger.info("[Node] BlockUntil: Reply had a null value"+ne.toString());
+				logger.info("[Node] BlockUntil: Reply had a null value"+entry.getKey().toString());
 				if(entry.getValue() != null){
 					entry.getValue().setLinger(0);
 					entry.getValue().close();
@@ -405,16 +365,20 @@ public class ZMQNode implements NetworkInterface, Runnable {
 				}
 				//ne.printStackTrace();
 			} catch (ZMQException ze){
-				logger.debug("[Node] Error closing connection: "+entry.getKey().toString());
-				entry.getValue().setLinger(0);
-				entry.getValue().close();
-				delmark.put(entry.getKey(), entry.getValue());
+				logger.info("[Node] Error closing connection: "+entry.getKey().toString());
+				if(entry.getValue() != null){
+					entry.getValue().setLinger(0);
+					entry.getValue().close();
+					delmark.put(entry.getKey(),entry.getValue());
+				}
 				ze.printStackTrace();
 			} catch (Exception e){
-				logger.debug("[Node] Error closing connection: "+entry.getKey().toString());
-				entry.getValue().setLinger(0);
-				entry.getValue().close();
-				delmark.put(entry.getKey(), entry.getValue());
+				logger.info("[Node] Error closing connection: "+entry.getKey().toString());
+				if(entry.getValue() != null){
+					entry.getValue().setLinger(0);
+					entry.getValue().close();
+					delmark.put(entry.getKey(),entry.getValue());
+				}
 				e.printStackTrace();
 			}
 		}
