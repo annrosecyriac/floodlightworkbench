@@ -73,12 +73,9 @@ public class HAController implements IFloodlightModule {
 	@Override
 	public void startUp(FloodlightModuleContext context) throws FloodlightModuleException {
 		// TODO Auto-generated method stub
-		Thread t1 = new Thread(new QueueDevice(4242,5252), "QueueDeviceThread");
-		t1.start();
 		//startServer();
-		Thread n1 = new Thread (new ZMQNode(4242,5252,"1"), "ZMQThread");
-		n1.start();
-		
+		Thread e1 = new Thread (new AsyncElection(), "ElectionThread");
+		e1.start();
 	}
 	
 	public static void startServer(){

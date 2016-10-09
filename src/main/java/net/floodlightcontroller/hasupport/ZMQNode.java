@@ -115,7 +115,6 @@ public class ZMQNode implements NetworkInterface, Runnable {
 			BufferedReader br = new BufferedReader(configFile);
 			
 			while((line = br.readLine()) != null){
-				System.out.println(line);
 				this.serverList.add(new Integer(line.trim()));
 				this.allServerList.add(new Integer(line.trim()));
 			}
@@ -195,6 +194,8 @@ public class ZMQNode implements NetworkInterface, Runnable {
 	public void run() {
 		// TODO Auto-generated method stub
 		logger.info("Server List: "+this.serverList.toString());
+		Thread t1 = new Thread(new QueueDevice(this.serverPort,this.clientPort), "QueueDeviceThread");
+		t1.start();
 	}
 
 }
