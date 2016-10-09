@@ -276,7 +276,7 @@ public class ZMQNode implements NetworkInterface, Runnable {
 		doConnect();
 		
 		updateConnectDict();
-		return (HashMap<Integer, netState>) Collections.unmodifiableMap(this.connectDict);
+		return (Map<Integer, netState>) Collections.unmodifiableMap(this.connectDict);
 	}
 
 	@Override
@@ -336,7 +336,7 @@ public class ZMQNode implements NetworkInterface, Runnable {
 		logger.info("Expired old connections.");
 		
 		updateConnectDict();
-		return (HashMap<Integer, netState>) Collections.unmodifiableMap(this.connectDict);
+		return (Map<Integer, netState>) Collections.unmodifiableMap(this.connectDict);
 	}
 
 	/**
@@ -417,7 +417,7 @@ public class ZMQNode implements NetworkInterface, Runnable {
 	}
 	
 	public Map<Integer, netState> getConnectDict(){
-		return (HashMap<Integer, netState>) Collections.unmodifiableMap(this.connectDict);
+		return (Map<Integer, netState>) Collections.unmodifiableMap(this.connectDict);
 	}
 
 	/**

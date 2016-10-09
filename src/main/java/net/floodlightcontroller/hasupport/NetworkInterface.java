@@ -55,8 +55,8 @@ public interface NetworkInterface {
 	 * 
 	 * connectSet : A set that holds a list of the configured nodes 
 	 * 			    from the server configuration
-	 * @return    : HashMap which holds the <portnumber, state> of
-	 * 			    all the nodes.
+	 * @return    : An Unmodifiable copy of the HashMap which 
+	 * 				holds the <portnumber, state> of all the nodes. (connectDict)
 	 */
 	
 	public Map<Integer, netState> connectClients();
@@ -68,7 +68,7 @@ public interface NetworkInterface {
 	 * 
 	 * connectDict : HashMap which holds the <portnumber, state> of
 	 * 			     all the nodes.
-	 * @return     : Updated copy of the connectDict
+	 * @return     : Updated unmodifiable copy of the connectDict
 	 */
 	
 	public Map<Integer, netState> checkForNewConnections();
@@ -79,7 +79,7 @@ public interface NetworkInterface {
 	 * 
 	 * connectDict : HashMap which holds the <portnumber, state> of
 	 * 			     all the nodes. 
-	 * @return     : Updated copy of the connectDict
+	 * @return     : Updated unmodifiable copy of the connectDict
 	 */
 	
 	public Map<Integer, netState> expireOldConnections();
@@ -92,7 +92,18 @@ public interface NetworkInterface {
 	
 	public ElectionState blockUntilConnected();
 	
+	/**
+	 * Translate the socketDict into the connectDict, meaning set ON/OFF
+	 * for the client ports that are connected, so that the election algorithm
+	 * knows if it can send a message to the particular client or not.
+	 */
+	
 	public void updateConnectDict();
+	
+	/**
+	 * Get an unmodifiable version of the connectDict.
+	 * @return : Updated unmodifiable copy of the connectDict
+	 */
 	
 	public Map<Integer, netState> getConnectDict();
 	

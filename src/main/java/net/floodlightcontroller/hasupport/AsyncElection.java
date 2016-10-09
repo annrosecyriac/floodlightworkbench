@@ -46,6 +46,7 @@ public class AsyncElection implements Runnable{
 		Thread n1 = new Thread (network, "ZMQThread");
 		n1.start();
 		logger.info("Network majority: "+network.majority.toString());
+		network.getConnectDict();
 		network.blockUntilConnected();
 	}
 
