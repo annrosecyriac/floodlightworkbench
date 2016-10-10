@@ -6,6 +6,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Map;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import org.zeromq.ZMQ;
 import org.zeromq.ZMQException;
@@ -16,6 +18,8 @@ import net.floodlightcontroller.core.module.FloodlightModuleContext;
 import net.floodlightcontroller.core.module.FloodlightModuleException;
 import net.floodlightcontroller.core.module.IFloodlightModule;
 import net.floodlightcontroller.core.module.IFloodlightService;
+import net.floodlightcontroller.core.util.SingletonTask;
+import net.floodlightcontroller.threadpool.IThreadPoolService;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,6 +27,8 @@ import org.slf4j.LoggerFactory;
 public class HAController implements IFloodlightModule {
 
 	private static Logger logger = LoggerFactory.getLogger(HAController.class);
+	protected static IThreadPoolService threadPoolService;
+	protected static SingletonTask electionTask;
 	
 	
 	public static void setSysPath(){
@@ -41,6 +47,7 @@ public class HAController implements IFloodlightModule {
 		
 		return;
 	}
+
 	
 	@Override
 	public Collection<Class<? extends IFloodlightService>> getModuleServices() {
@@ -57,8 +64,8 @@ public class HAController implements IFloodlightModule {
 	@Override
 	public Collection<Class<? extends IFloodlightService>> getModuleDependencies() {
 		// TODO Auto-generated method stub
-		Collection<Class<? extends IFloodlightService>> l = 
-				new ArrayList<Class <? extends IFloodlightService>>();
+    	Collection<Class<? extends IFloodlightService>> l = new ArrayList<Class<? extends IFloodlightService>>();
+		l.add(IThreadPoolService.class);
 		l.add(IFloodlightProviderService.class);
 		return l;
 	}
@@ -67,6 +74,7 @@ public class HAController implements IFloodlightModule {
 	public void init(FloodlightModuleContext context) throws FloodlightModuleException {
 		// TODO Auto-generated method stub
 		logger = LoggerFactory.getLogger(HAController.class);
+		threadPoolService = context.getServiceImpl(IThreadPoolService.class);
 		setSysPath();
 	}
 
@@ -74,13 +82,10 @@ public class HAController implements IFloodlightModule {
 	public void startUp(FloodlightModuleContext context) throws FloodlightModuleException {
 		// TODO Auto-generated method stub
 		//startServer();
+		ScheduledExecutorService ses = threadPoolService.getScheduledExecutor();
+		electionTask = new SingletonTask(ses, new AsyncElection());		
 		try{
-			Thread e1 = new Thread (new AsyncElection(), "ElectionThread");
-			e1.start();
-			e1.join();
-		}  catch (InterruptedException ie){
-			logger.info("[Election] Was interrrupted! "+ie.toString());
-			ie.printStackTrace();
+			electionTask.reschedule(1, TimeUnit.SECONDS);
 		} catch (Exception e){
 			logger.info("[Election] Was interrrupted! "+e.toString());
 			e.printStackTrace();
