@@ -1,5 +1,6 @@
 package net.floodlightcontroller.hasupport.linkdiscovery;
 
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -24,13 +25,14 @@ import net.floodlightcontroller.core.module.FloodlightModuleException;
 import net.floodlightcontroller.core.module.IFloodlightModule;
 import net.floodlightcontroller.core.module.IFloodlightService;
 import net.floodlightcontroller.core.util.SingletonTask;
+import net.floodlightcontroller.hasupport.IHAWorker;
 import net.floodlightcontroller.linkdiscovery.ILinkDiscoveryListener;
 import net.floodlightcontroller.linkdiscovery.ILinkDiscoveryService;
 import net.floodlightcontroller.storage.StorageException;
 import net.floodlightcontroller.threadpool.IThreadPoolService;
 
 
-public class LDHAWorker implements IFloodlightModule, ILinkDiscoveryListener {
+public class LDHAWorker implements IHAWorker, ILDHAWorkerService, IFloodlightModule, ILinkDiscoveryListener {
 	protected static Logger logger = LoggerFactory.getLogger(LDHAWorker.class);
 	protected static ILinkDiscoveryService linkserv;
 	protected static IFloodlightProviderService floodlightProvider;
@@ -39,6 +41,67 @@ public class LDHAWorker implements IFloodlightModule, ILinkDiscoveryListener {
 	protected SingletonTask dummyTask;
 	List<String> synLDUList = Collections.synchronizedList(new ArrayList<String>());
 	protected static IThreadPoolService threadPoolService;
+	private static final LDFilterQueue myLDFilterQueue = new LDFilterQueue(); 
+	
+	private LDHAWorker(){};
+	
+	@Override
+	public JSONObject getJSONObject(String controllerID) {
+		// TODO Auto-generated method stub
+		return myJson;
+	}
+
+
+	@Override
+	public JSONObject assembleUpdate() {
+		// TODO Auto-generated method stub
+		JSONObject myJson = new JSONObject();
+		Integer i=0;
+		for(String update : synLDUList){
+			String key = "field" + i.toString();
+			myJson.append(key, update);
+			i=i+1;
+		}
+		
+		logger.info("MyJson: "+myJson.toString());
+		return myJson;
+	}
+
+
+	@Override
+	public boolean publishHook() {
+		// TODO Auto-generated method stub
+		assembleUpdate();		
+		myLDFilterQueue.enqueueForward(myJson);
+		return true;
+	}
+
+
+	@Override
+	public boolean subscribeHook(String controllerID) {
+		// TODO Auto-generated method stub
+		return false;
+	}
+	
+	/**
+	 * This function is called by external users to getUpdates 
+	 */
+	@Override
+	public JSONObject getUpdates() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+    /**
+     * This function is called by external users to push JSON objects 
+     * into 
+     */
+	@Override
+	public void pushUpdates(JSONObject update) {
+		// TODO Auto-generated method stub
+		
+		
+	}
 
 	@Override
 	public void linkDiscoveryUpdate(List<LDUpdate> updateList) {
@@ -77,6 +140,7 @@ public class LDHAWorker implements IFloodlightModule, ILinkDiscoveryListener {
 		logger.info("LDHAWorker is starting...");
 		synchronized (synLDUList){
 			logger.info("Printing Update {}: ",new Object[]{synLDUList});
+			assembleUpdate();
 			synLDUList.clear();
 		}
 	}
@@ -110,4 +174,5 @@ public class LDHAWorker implements IFloodlightModule, ILinkDiscoveryListener {
 		});
 		dummyTask.reschedule(10, TimeUnit.SECONDS);
 	}
+	
 }
