@@ -12,11 +12,11 @@ public interface IFilterQueue {
 	
 	public boolean enqueueForward(JSONObject value);
 	
-	public boolean dequeueForward(JSONObject value);
+	public boolean dequeueForward();
 	
 	public boolean enqueueReverse(JSONObject value);
 	
-	public boolean dequeueReverse(JSONObject value);
+	public boolean dequeueReverse();
 	
 
 }

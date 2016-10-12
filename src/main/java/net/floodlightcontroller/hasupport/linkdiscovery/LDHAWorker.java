@@ -43,7 +43,7 @@ public class LDHAWorker implements IHAWorker, ILDHAWorkerService, IFloodlightMod
 	protected static IThreadPoolService threadPoolService;
 	private static final LDFilterQueue myLDFilterQueue = new LDFilterQueue(); 
 	
-	private LDHAWorker(){};
+	public LDHAWorker(){};
 	
 	@Override
 	public JSONObject getJSONObject(String controllerID) {
@@ -57,6 +57,7 @@ public class LDHAWorker implements IHAWorker, ILDHAWorkerService, IFloodlightMod
 		// TODO Auto-generated method stub
 		JSONObject myJson = new JSONObject();
 		Integer i=0;
+		
 		for(String update : synLDUList){
 			String key = "field" + i.toString();
 			myJson.append(key, update);
@@ -71,9 +72,18 @@ public class LDHAWorker implements IHAWorker, ILDHAWorkerService, IFloodlightMod
 	@Override
 	public boolean publishHook() {
 		// TODO Auto-generated method stub
-		assembleUpdate();		
-		myLDFilterQueue.enqueueForward(myJson);
-		return true;
+		try{
+			synchronized (synLDUList){
+				logger.info("Printing Update {}: ",new Object[]{synLDUList});
+				assembleUpdate();
+				myLDFilterQueue.enqueueForward(myJson);
+				synLDUList.clear();
+			}
+			return true;
+		} catch (Exception e){
+			logger.debug("[LDHAWorker] An exception occoured!");
+			return false;
+		}
 	}
 
 
@@ -136,15 +146,6 @@ public class LDHAWorker implements IHAWorker, ILDHAWorkerService, IFloodlightMod
 		return l;
 	}
 	
-	public void dummyfn(){
-		logger.info("LDHAWorker is starting...");
-		synchronized (synLDUList){
-			logger.info("Printing Update {}: ",new Object[]{synLDUList});
-			assembleUpdate();
-			synLDUList.clear();
-		}
-	}
-	
 	@Override
 	public void init(FloodlightModuleContext context) throws FloodlightModuleException {
 		// TODO Auto-generated method stub
@@ -158,13 +159,15 @@ public class LDHAWorker implements IHAWorker, ILDHAWorkerService, IFloodlightMod
 		logger = LoggerFactory.getLogger(LDHAWorker.class);
 		linkserv.addListener(this);
 		ScheduledExecutorService ses = threadPoolService.getScheduledExecutor();
+		
+		logger.info("LDHAWorker is starting...");
 
 		// To be started by the first switch connection
 		dummyTask = new SingletonTask(ses, new Runnable() {
 			@Override
 			public void run() {
 				try {
-					dummyfn();
+					publishHook();
 				} catch (Exception e) {
 					logger.error("Exception in LDWorker.", e);
 				} finally {

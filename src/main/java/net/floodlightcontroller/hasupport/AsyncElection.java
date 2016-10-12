@@ -128,15 +128,15 @@ public class AsyncElection implements Runnable{
 					// This is the follower state, currently I am the leader of the network.
 					logger.info("+++++++++++++++ [LEADER] Leader is set to: "+this.leader.toString());
 					
-					this.sendIWon();
+//					this.sendIWon();
 					
 					// Keep the leader in coordinate state.
-					this.sendLeaderMsg();
-					this.setAsLeader();
+//					this.sendLeaderMsg();
+//					this.setAsLeader();
 					
 					// Keep sending a heartbeat message, and receive a majority of acceptors,
 					// otherwise go to the elect state.
-					this.sendHeartBeat();
+//					this.sendHeartBeat();
 					
 					TimeUnit.SECONDS.sleep(this.chill.intValue());
 					

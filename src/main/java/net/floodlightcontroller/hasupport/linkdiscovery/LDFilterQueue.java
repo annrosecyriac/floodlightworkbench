@@ -4,6 +4,8 @@ package net.floodlightcontroller.hasupport.linkdiscovery;
 import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import org.json.*;
@@ -15,9 +17,12 @@ import com.sun.javafx.collections.MappingChange.Map;
 import net.floodlightcontroller.hasupport.IFilterQueue;
 
 public class LDFilterQueue implements IFilterQueue {
-	protected static Logger logger = LoggerFactory.getLogger(LDHAWorker.class);
+	
+	protected static Logger logger = LoggerFactory.getLogger(LDFilterQueue.class);
+	private static final LDSyncAdapter syncAdapter = new LDSyncAdapter();
+	
 	LinkedBlockingQueue<JSONObject> filterQueue;
-	Map<String, JSONObject> myMap;
+	HashMap<String, JSONObject> myMap = new HashMap<String, JSONObject>();
 	
 
 	@Override
@@ -28,21 +33,35 @@ public class LDFilterQueue implements IFilterQueue {
 			mdEnc = MessageDigest.getInstance("MD5");
 			mdEnc.digest(value.toString().getBytes());
 			String md5 = new BigInteger(1, mdEnc.digest()).toString(16);
+			if( (!myMap.containsKey(md5)) && (!value.equals(null)) ){
+				filterQueue.offer(value);
+				myMap.put(md5, value);
+			}
+			return true;
 		} catch (NoSuchAlgorithmException nae) {
 			// TODO Auto-generated catch block
 			logger.debug("[FilterQ] No such algorithm MD5!");
 			nae.printStackTrace();
+			return false;
 		} catch (Exception e){
 			logger.debug("[FilterQ] Exception: enqueueFwd!");
 			e.printStackTrace();
-		}		
-		filterQueue.offer(value);	
-		return false;
+			return false;
+		}
 	}
 
 	@Override
-	public boolean dequeueForward(JSONObject value) {
+	public boolean dequeueForward() {
 		// TODO Auto-generated method stub
+		try {
+			LinkedList<JSONObject> LDupds = new LinkedList<JSONObject>();
+			filterQueue.drainTo(LDupds);
+			syncAdapter.packJSON(LDupds);
+		} catch (Exception e){
+			logger.debug("[FilterQ] Dequeue Forward failed!");
+			e.printStackTrace();
+		}
+		
 		return false;
 	}
 
@@ -53,7 +72,7 @@ public class LDFilterQueue implements IFilterQueue {
 	}
 
 	@Override
-	public boolean dequeueReverse(JSONObject value) {
+	public boolean dequeueReverse() {
 		// TODO Auto-generated method stub
 		return false;
 	}
