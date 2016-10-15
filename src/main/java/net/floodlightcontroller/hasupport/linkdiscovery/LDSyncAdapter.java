@@ -2,7 +2,6 @@ package net.floodlightcontroller.hasupport.linkdiscovery;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -12,7 +11,6 @@ import org.sdnplatform.sync.IStoreClient;
 import org.sdnplatform.sync.IStoreListener;
 import org.sdnplatform.sync.ISyncService;
 import org.sdnplatform.sync.ISyncService.Scope;
-import org.sdnplatform.sync.Versioned;
 import org.sdnplatform.sync.error.SyncException;
 import org.sdnplatform.sync.internal.rpc.IRPCListener;
 import org.slf4j.Logger;
@@ -30,7 +28,7 @@ public class LDSyncAdapter implements ISyncAdapter, IFloodlightModule, IStoreLis
 
 	protected static Logger logger = LoggerFactory.getLogger(LDSyncAdapter.class);
 	protected static ISyncService syncService;
-	protected static IStoreClient<String, String> storeLD;
+	protected static IStoreClient<String, JSONObject> storeLD;
 	protected static IFloodlightProviderService floodlightProvider;
 	private String controllerId;
 
@@ -43,27 +41,21 @@ public class LDSyncAdapter implements ISyncAdapter, IFloodlightModule, IStoreLis
 		// TODO Auto-generated method stub
 		try {
 			Integer i = new Integer(0);
-			for(JSONObject update: updates){
-				this.storeLD.put((controllerId+i.toString()), update.toString());
+			for (JSONObject update: updates){
+				LDSyncAdapter.storeLD.put((controllerId+i.toString()), update);
 				logger.info("+++++++++++++ Retrieving from DB: CID:{}, Update:{}", 
 	                    new Object[] {
-	                            controllerId+i.toString(), 
-	                            update.toString()
+	                            controllerId,
+	                            update
 	                        });
-				
+				i = i+1;
 			}
-			Versioned<String> retupdate = this.storeLD.get(controllerId+new Integer(3).toString());
-			logger.info("+++++++++++++ Retrieving from DB: CID:{}, Update:{}", 
-                    new Object[] {
-                            controllerId, 
-                            retupdate.getValue().toString()
-                        });
 		} catch (SyncException se) {
 			// TODO Auto-generated catch block
-			logger.debug("[LDSync] Sync Exception in LDSyncAdapter!");
+			logger.info("[LDSync] Exception: sync packJSON!");
 			se.printStackTrace();
 		} catch (Exception e) {
-			logger.debug("[LDSync] Sync Exception in LDSyncAdapter!");
+			logger.info("[LDSync] Exception: packJSON!");
 			e.printStackTrace();
 		}
 		
@@ -108,13 +100,13 @@ public class LDSyncAdapter implements ISyncAdapter, IFloodlightModule, IStoreLis
 		// TODO Auto-generated method stub
 		syncService.addRPCListener(this);
 		try {
-            this.syncService.registerStore("LDUpdates", Scope.GLOBAL);
+            LDSyncAdapter.syncService.registerStore("LDUpdates", Scope.GLOBAL);
             
-            this.storeLD = this.syncService
+            LDSyncAdapter.storeLD = LDSyncAdapter.syncService
             		.getStoreClient("LDUpdates", 
             				String.class, 
-            				String.class);
-            this.storeLD.addStoreListener(this);
+            				JSONObject.class);
+            LDSyncAdapter.storeLD.addStoreListener(this);
         } catch (SyncException e) {
             throw new FloodlightModuleException("Error while setting up sync service", e);
         }

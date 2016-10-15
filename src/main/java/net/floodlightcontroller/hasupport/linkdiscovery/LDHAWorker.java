@@ -10,16 +10,9 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import org.json.*;
-import org.projectfloodlight.openflow.protocol.OFMessage;
-import org.projectfloodlight.openflow.protocol.OFType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import net.floodlightcontroller.core.FloodlightContext;
-import net.floodlightcontroller.core.HARole;
 import net.floodlightcontroller.core.IFloodlightProviderService;
-import net.floodlightcontroller.core.IOFMessageListener;
-import net.floodlightcontroller.core.IOFSwitch;
-import net.floodlightcontroller.core.internal.IOFSwitchService;
 import net.floodlightcontroller.core.module.FloodlightModuleContext;
 import net.floodlightcontroller.core.module.FloodlightModuleException;
 import net.floodlightcontroller.core.module.IFloodlightModule;
@@ -28,7 +21,6 @@ import net.floodlightcontroller.core.util.SingletonTask;
 import net.floodlightcontroller.hasupport.IHAWorker;
 import net.floodlightcontroller.linkdiscovery.ILinkDiscoveryListener;
 import net.floodlightcontroller.linkdiscovery.ILinkDiscoveryService;
-import net.floodlightcontroller.storage.StorageException;
 import net.floodlightcontroller.threadpool.IThreadPoolService;
 
 
@@ -36,7 +28,6 @@ public class LDHAWorker implements IHAWorker, ILDHAWorkerService, IFloodlightMod
 	protected static Logger logger = LoggerFactory.getLogger(LDHAWorker.class);
 	protected static ILinkDiscoveryService linkserv;
 	protected static IFloodlightProviderService floodlightProvider;
-	public JSONObject myJson = new JSONObject();
 	
 	protected SingletonTask dummyTask;
 	List<String> synLDUList = Collections.synchronizedList(new ArrayList<String>());
@@ -46,11 +37,9 @@ public class LDHAWorker implements IHAWorker, ILDHAWorkerService, IFloodlightMod
 	public LDHAWorker(){};
 	
 	@Override
-	public JSONObject getJSONObject(String controllerID) {
-		// TODO Auto-generated method stub
-		return myJson;
+	public JSONObject getJSONObject(String controllerId){
+		return new JSONObject();
 	}
-
 
 	@Override
 	public JSONObject assembleUpdate() {
@@ -75,9 +64,10 @@ public class LDHAWorker implements IHAWorker, ILDHAWorkerService, IFloodlightMod
 		try{
 			synchronized (synLDUList){
 				logger.info("Printing Update {}: ",new Object[]{synLDUList});
-				assembleUpdate();
-				myLDFilterQueue.enqueueForward(myJson);
+				myLDFilterQueue.enqueueForward(assembleUpdate());
 				synLDUList.clear();
+				TimeUnit.SECONDS.sleep(5);
+				myLDFilterQueue.dequeueForward();
 			}
 			return true;
 		} catch (Exception e){
