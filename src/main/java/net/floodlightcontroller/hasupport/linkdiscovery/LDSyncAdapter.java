@@ -2,6 +2,7 @@ package net.floodlightcontroller.hasupport.linkdiscovery;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -11,6 +12,7 @@ import org.sdnplatform.sync.IStoreClient;
 import org.sdnplatform.sync.IStoreListener;
 import org.sdnplatform.sync.ISyncService;
 import org.sdnplatform.sync.ISyncService.Scope;
+import org.sdnplatform.sync.Versioned;
 import org.sdnplatform.sync.error.SyncException;
 import org.sdnplatform.sync.internal.rpc.IRPCListener;
 import org.slf4j.Logger;
@@ -22,12 +24,13 @@ import net.floodlightcontroller.core.module.FloodlightModuleException;
 import net.floodlightcontroller.core.module.IFloodlightModule;
 import net.floodlightcontroller.core.module.IFloodlightService;
 import net.floodlightcontroller.hasupport.ISyncAdapter;
+import net.floodlightcontroller.storage.IStorageSourceService;
 
 public class LDSyncAdapter implements ISyncAdapter, IFloodlightModule, IStoreListener<String>, IRPCListener {
 
 	protected static Logger logger = LoggerFactory.getLogger(LDSyncAdapter.class);
 	protected static ISyncService syncService;
-	protected static IStoreClient<String, JSONObject> storeLD;
+	protected static IStoreClient<String, String> storeLD;
 	protected static IFloodlightProviderService floodlightProvider;
 	private String controllerId;
 
@@ -39,9 +42,22 @@ public class LDSyncAdapter implements ISyncAdapter, IFloodlightModule, IStoreLis
 	public void packJSON(List<JSONObject> updates) {
 		// TODO Auto-generated method stub
 		try {
+			Integer i = new Integer(0);
 			for(JSONObject update: updates){
-				this.storeLD.put(controllerId, update);
+				this.storeLD.put((controllerId+i.toString()), update.toString());
+				logger.info("+++++++++++++ Retrieving from DB: CID:{}, Update:{}", 
+	                    new Object[] {
+	                            controllerId+i.toString(), 
+	                            update.toString()
+	                        });
+				
 			}
+			Versioned<String> retupdate = this.storeLD.get(controllerId+new Integer(3).toString());
+			logger.info("+++++++++++++ Retrieving from DB: CID:{}, Update:{}", 
+                    new Object[] {
+                            controllerId, 
+                            retupdate.getValue().toString()
+                        });
 		} catch (SyncException se) {
 			// TODO Auto-generated catch block
 			logger.debug("[LDSync] Sync Exception in LDSyncAdapter!");
@@ -70,9 +86,10 @@ public class LDSyncAdapter implements ISyncAdapter, IFloodlightModule, IStoreLis
 		// TODO Auto-generated method stub
         Collection<Class<? extends IFloodlightService>> l =
                 new ArrayList<Class<? extends IFloodlightService>>();
+        l.add(IStorageSourceService.class);
         l.add(IFloodlightProviderService.class);
         l.add(ISyncService.class);
-		return null;
+		return l;
 	}
 
 	@Override
@@ -96,7 +113,7 @@ public class LDSyncAdapter implements ISyncAdapter, IFloodlightModule, IStoreLis
             this.storeLD = this.syncService
             		.getStoreClient("LDUpdates", 
             				String.class, 
-            				JSONObject.class);
+            				String.class);
             this.storeLD.addStoreListener(this);
         } catch (SyncException e) {
             throw new FloodlightModuleException("Error while setting up sync service", e);
@@ -107,6 +124,26 @@ public class LDSyncAdapter implements ISyncAdapter, IFloodlightModule, IStoreLis
 	@Override
 	public void keysModified(Iterator<String> keys, org.sdnplatform.sync.IStoreListener.UpdateType type) {
 		// TODO Auto-generated method stub
+		while(keys.hasNext()){
+	        String k = keys.next();
+	        try {
+	            String value = storeLD.get(k).getValue().toString();
+				logger.info("+++++++++++++ Retriving value from DB: Key:{}, Value:{}, Type: {}", 
+	                    new Object[] {
+	                            k, 
+	                            value, 
+	                            type.name()
+	                        }
+	                    );
+	            if(type.name().equals("REMOTE")){
+	                String info = value;
+	                logger.info("++++++++++++++++ REMOTE: Key:{}, Value:{}", k, info);
+	            }
+	        } catch (SyncException e) {
+	            e.printStackTrace();
+	        }
+	    }
+
 		
 	}
 

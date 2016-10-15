@@ -81,7 +81,7 @@ public class LDHAWorker implements IHAWorker, ILDHAWorkerService, IFloodlightMod
 			}
 			return true;
 		} catch (Exception e){
-			logger.debug("[LDHAWorker] An exception occoured!");
+			logger.info("[LDHAWorker] An exception occoured!");
 			return false;
 		}
 	}
@@ -169,7 +169,7 @@ public class LDHAWorker implements IHAWorker, ILDHAWorkerService, IFloodlightMod
 				try {
 					publishHook();
 				} catch (Exception e) {
-					logger.error("Exception in LDWorker.", e);
+					logger.info("Exception in LDWorker.", e);
 				} finally {
 					dummyTask.reschedule(10, TimeUnit.SECONDS);	
 				}
