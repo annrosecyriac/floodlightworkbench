@@ -1,6 +1,5 @@
 package net.floodlightcontroller.hasupport;
 
-import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -8,10 +7,6 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-
-import org.zeromq.ZMQ;
-import org.zeromq.ZMQException;
-import org.zeromq.ZMQQueue;
 
 import net.floodlightcontroller.core.IFloodlightProviderService;
 import net.floodlightcontroller.core.module.FloodlightModuleContext;
@@ -23,6 +18,11 @@ import net.floodlightcontroller.threadpool.IThreadPoolService;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+/**
+ * The HAController
+ * @author Bhargav Srinivasan
+ */
 
 public class HAController implements IFloodlightModule {
 
@@ -81,40 +81,17 @@ public class HAController implements IFloodlightModule {
 	@Override
 	public void startUp(FloodlightModuleContext context) throws FloodlightModuleException {
 		// TODO Auto-generated method stub
-		//startServer();
+		
+		//Read config file and start the Election class with the right params.
+		
 		ScheduledExecutorService ses = threadPoolService.getScheduledExecutor();
-		electionTask = new SingletonTask(ses, new AsyncElection());		
+		electionTask = new SingletonTask(ses, new AsyncElection("127.0.0.1:4242","127.0.0.1:5252","1"));		
 		try{
 			electionTask.reschedule(1, TimeUnit.SECONDS);
 		} catch (Exception e){
 			logger.info("[Election] Was interrrupted! "+e.toString());
 			e.printStackTrace();
 		}
-	}
-	
-	public static void startServer(){
-		
-		// Start: Simple ZMQ server
-		ZMQ.Context zmqcontext = ZMQ.context(1);
-				
-		ZMQ.Socket responder = zmqcontext.socket(ZMQ.REP);
-		responder.bind("tcp://*:5555");
-		
-		logger.info(new String("Starting server on :5555..."));
-		
-		try{
-			while(Boolean.TRUE){
-				byte[] resp = responder.recv(0); 
-				logger.info(new String(resp));
-				String reply = "server response";
-				responder.send(reply.getBytes(),0);
-			}
-		} catch (Exception e){
-			logger.info(e.toString());
-			responder.close();
-			zmqcontext.term();		
-		}
-		
 	}
 	
 }

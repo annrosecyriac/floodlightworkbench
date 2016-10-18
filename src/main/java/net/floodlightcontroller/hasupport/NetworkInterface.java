@@ -13,7 +13,7 @@ import java.util.Map;
  * connections between the nodes (ON/OFF). Depending on this, the 
  * election algorithm can decide whether to include this node 
  * in the election process. 
- * @author Bhargav Srinivasan, Om Kale
+ * @author Bhargav Srinivasan
  *
  */
 
@@ -31,22 +31,22 @@ public interface NetworkInterface {
 	 * This is the send function which is used to send a message from 
 	 * one node to another using the network.
 	 * 
-	 * @param clientPort : Destination client port.
+	 * @param clientPort : Destination client netaddr.
 	 * @param message    : Message that needs to be sent. 
 	 * @return			 : Return code, success/fail.
 	 */
 	
-	public Boolean send(Integer clientPort, String message);
+	public Boolean send(String clientPort, String message);
 	
 	/**
 	 * This is the recv() function which is used to receive a message
 	 * from any other node.
 	 * 
-	 * @param receivingPort : Port that is waiting to receive a message.
+	 * @param receivingPort : netaddr that is waiting to receive a message.
 	 * @return			    : Message that was received.
 	 */
 	
-	public String recv(Integer receivingPort);
+	public String recv(String receivingPort);
 	
 	/**
 	 * This is the connectClients() function which is used to TRY connecting to
@@ -59,7 +59,7 @@ public interface NetworkInterface {
 	 * 				holds the <portnumber, state> of all the nodes. (connectDict)
 	 */
 	
-	public Map<Integer, netState> connectClients();
+	public Map<String, netState> connectClients();
 	
 	/**
 	 * This function is used to TRY connecting to the nodes that are 
@@ -71,7 +71,7 @@ public interface NetworkInterface {
 	 * @return     : Updated unmodifiable copy of the connectDict
 	 */
 	
-	public Map<Integer, netState> checkForNewConnections();
+	public Map<String, netState> checkForNewConnections();
 	
 	/**
 	 * This function is used to test if the connections in the connectDict are
@@ -82,7 +82,7 @@ public interface NetworkInterface {
 	 * @return     : Updated unmodifiable copy of the connectDict
 	 */
 	
-	public Map<Integer, netState> expireOldConnections();
+	public Map<String, netState> expireOldConnections();
 	
 	/**
 	 * This function is used to spin in the CONNECT state of the election algorithm,
@@ -105,6 +105,6 @@ public interface NetworkInterface {
 	 * @return : Updated unmodifiable copy of the connectDict
 	 */
 	
-	public Map<Integer, netState> getConnectDict();
+	public Map<String, netState> getConnectDict();
 	
 }

@@ -8,14 +8,17 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Map;
-import java.util.Set;
 
 import org.python.modules.math;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.zeromq.ZMQ;
-import org.zeromq.ZMQ.Socket;
 import org.zeromq.ZMQException;
+
+/**
+ * The Network Node
+ * @author Bhargav Srinivasan
+ */
 
 public class ZMQNode implements NetworkInterface, Runnable {
 	
@@ -24,8 +27,8 @@ public class ZMQNode implements NetworkInterface, Runnable {
 	private ZMQ.Context zmqcontext = ZMQ.context(10);
 	
 	public final String controllerID;
-	public final Integer serverPort;
-	public final Integer clientPort;
+	public final String serverPort;
+	public final String clientPort;
 	
 	/**
 	 * The server list holds the server port IDs of all present 
@@ -34,17 +37,19 @@ public class ZMQNode implements NetworkInterface, Runnable {
 	 * which are to be connected
 	 */
 
-	public LinkedList<Integer> serverList = new LinkedList<Integer>();
-	public LinkedList<Integer> allServerList = new LinkedList<Integer>();
-	public HashSet<Integer>    connectSet = new HashSet<Integer>();
+	public LinkedList<String> serverList = new LinkedList<String>();
+	public LinkedList<String> allServerList = new LinkedList<String>();
+	public HashSet<String>    connectSet = new HashSet<String>();
 	
 	/**
 	 * Holds the connection state/ socket object for each of the client
 	 * connections.
 	 */
 	
-	public HashMap<Integer, ZMQ.Socket> socketDict = new HashMap<Integer, ZMQ.Socket>();
-	public HashMap<Integer, netState> connectDict = new HashMap<Integer, netState>();
+	public HashMap<String, ZMQ.Socket>  socketDict             = new HashMap<String, ZMQ.Socket>();
+	public HashMap<String, netState>    connectDict            = new HashMap<String, netState>();
+	public HashMap<Integer, String>     netcontrollerID        = new HashMap<Integer, String>();
+	public HashMap<String, Integer>     netcontrollerIDStatic  = new HashMap<String, Integer>();
 	
 	/**
 	 * Standardized sleep times for retry connections, socket timeouts,
@@ -74,13 +79,13 @@ public class ZMQNode implements NetworkInterface, Runnable {
 	 * @param controllerID
 	 */
 
-	public ZMQNode(Integer serverPort, Integer clientPort, String controllerID){
+	public ZMQNode(String serverPort, String clientPort, String controllerID){
 		/**
 		 * The port variables needed in order to start the
 		 * backend and frontend of the queue device.
 		 */
-		this.serverPort = serverPort;
-		this.clientPort = clientPort;
+		this.serverPort = serverPort.toString();
+		this.clientPort = clientPort.toString();
 		this.controllerID = controllerID;
 		preStart();
 		this.totalRounds = new Integer(this.connectSet.size());
@@ -95,20 +100,23 @@ public class ZMQNode implements NetworkInterface, Runnable {
 	}
 	
 	public void preStart(){
-		String filename = "src/main/resources/server2.config";
+		String filename = "src/main/resources/server.config";
 		
 		try{
 			FileReader configFile = new FileReader(filename);
 			String line = null;
 			BufferedReader br = new BufferedReader(configFile);
 			
+			Integer cidIter = new Integer(1);
 			while((line = br.readLine()) != null){
-				this.serverList.add(new Integer(line.trim()));
-				this.allServerList.add(new Integer(line.trim()));
+				this.serverList.add(new String(line.trim()));
+				this.allServerList.add(new String(line.trim()));
+				this.netcontrollerIDStatic.put(new String(line.trim()), cidIter);
+				cidIter += 1;
 			}
 			
 			this.serverList.remove(this.clientPort);
-			this.connectSet = new HashSet<Integer>(this.serverList);
+			this.connectSet = new HashSet<String>(this.serverList);
 			
 			br.close();
 			configFile.close();
@@ -121,7 +129,7 @@ public class ZMQNode implements NetworkInterface, Runnable {
 	}
 	
 	@Override
-	public Boolean send(Integer clientPort, String message) {
+	public Boolean send(String clientPort, String message) {
 		// TODO Auto-generated method stub
 		ZMQ.Socket clientSock = socketDict.get(clientPort);
 		try{
@@ -147,12 +155,12 @@ public class ZMQNode implements NetworkInterface, Runnable {
 	}
 
 	@Override
-	public String recv(Integer receivingPort) {
+	public String recv(String receivingPort) {
 		// TODO Auto-generated method stub
 		ZMQ.Socket clientSock = socketDict.get(receivingPort);
 		try{
 			byte[] msg = clientSock.recv(0);
-			return new String(msg);
+			return new String(msg).trim();
 		} catch(ZMQException ze){
 			if(clientSock != null){
 				clientSock.setLinger(0);
@@ -175,10 +183,10 @@ public class ZMQNode implements NetworkInterface, Runnable {
 	
 	public void doConnect(){
 		
-		HashSet<Integer> diffSet 		= new HashSet<Integer>();
-		HashSet<Integer> connectedNodes = new HashSet<Integer>();
+		HashSet<String> diffSet 		= new HashSet<String>();
+		HashSet<String> connectedNodes  = new HashSet<String>();
 		
-		for(HashMap.Entry<Integer, ZMQ.Socket> entry: this.socketDict.entrySet()){
+		for(HashMap.Entry<String, ZMQ.Socket> entry: this.socketDict.entrySet()){
 			connectedNodes.add(entry.getKey());
 		}
 		
@@ -190,10 +198,10 @@ public class ZMQNode implements NetworkInterface, Runnable {
 		
 		// Try connecting to all nodes that are in the diffSet and store the 
 		// successful ones in the  socketDict.
-		for (Integer client: diffSet){
+		for (String client: diffSet){
 			ZMQ.Socket clientSock = zmqcontext.socket(ZMQ.REQ);
 			try{
-				clientSock.connect("tcp://127.0.0.1:"+client.toString());
+				clientSock.connect("tcp://"+client.toString());
 				//Set the socket timeouts for the current socket.
 				clientSock.setReceiveTimeOut(this.socketTimeout);
 				clientSock.setSendTimeOut(this.socketTimeout);
@@ -249,7 +257,7 @@ public class ZMQNode implements NetworkInterface, Runnable {
 	}
 
 	@Override
-	public Map<Integer, netState> connectClients() {
+	public Map<String, netState> connectClients() {
 		// TODO Auto-generated method stub
 		logger.info("[Node] To Connect: "+this.connectSet.toString());
 		logger.info("[Node] Connected: "+this.socketDict.keySet().toString());
@@ -257,34 +265,34 @@ public class ZMQNode implements NetworkInterface, Runnable {
 		doConnect();
 		
 		//Delete the already connected connections from the ToConnect Set.
-		for(HashMap.Entry<Integer, ZMQ.Socket> entry: this.socketDict.entrySet()){
+		for(HashMap.Entry<String, ZMQ.Socket> entry: this.socketDict.entrySet()){
 			if(this.connectSet.contains(entry.getKey())){
 				this.connectSet.remove(entry.getKey());
 				logger.info("Discarding already connected client: "+entry.getKey().toString());
 			}
 		}	
 		updateConnectDict();
-		return (Map<Integer, netState>) Collections.unmodifiableMap(this.connectDict);
+		return (Map<String, netState>) Collections.unmodifiableMap(this.connectDict);
 	}
 
 	@Override
-	public Map<Integer, netState> checkForNewConnections() {
+	public Map<String, netState> checkForNewConnections() {
 		// TODO Auto-generated method stub
-		this.connectSet = new HashSet<Integer> (this.serverList);
+		this.connectSet = new HashSet<String> (this.serverList);
 		
 		doConnect();
 		
 		updateConnectDict();
-		return (Map<Integer, netState>) Collections.unmodifiableMap(this.connectDict);
+		return (Map<String, netState>) Collections.unmodifiableMap(this.connectDict);
 	}
 
 	@Override
-	public Map<Integer, netState> expireOldConnections() {
+	public Map<String, netState> expireOldConnections() {
 		// TODO Auto-generated method stub
 		logger.info("Expiring old connections...");
-		HashMap<Integer, ZMQ.Socket> delmark = new HashMap<Integer,ZMQ.Socket>();
+		HashMap<String, ZMQ.Socket> delmark = new HashMap<String, ZMQ.Socket>();
 		
-		for(HashMap.Entry<Integer, ZMQ.Socket> entry: this.socketDict.entrySet()){
+		for(HashMap.Entry<String, ZMQ.Socket> entry: this.socketDict.entrySet()){
 			try{
 				byte[] rep = null;
 				for(int i=0; i <= this.numberOfPulses; i++){
@@ -328,14 +336,14 @@ public class ZMQNode implements NetworkInterface, Runnable {
 		}
 		
 		//Pop out all the expired connections from socketDict.
-		for (HashMap.Entry<Integer, ZMQ.Socket> entry: delmark.entrySet()){
+		for (HashMap.Entry<String, ZMQ.Socket> entry: delmark.entrySet()){
 			this.socketDict.remove(entry.getKey());
 		}
 		
 		logger.info("Expired old connections.");
 		
 		updateConnectDict();
-		return (Map<Integer, netState>) Collections.unmodifiableMap(this.connectDict);
+		return (Map<String, netState>) Collections.unmodifiableMap(this.connectDict);
 	}
 
 	/**
@@ -345,10 +353,10 @@ public class ZMQNode implements NetworkInterface, Runnable {
 	@Override
 	public ElectionState blockUntilConnected() {
 		// TODO Auto-generated method stub
-		this.connectSet = new HashSet<Integer> (this.serverList);
-		HashMap<Integer, ZMQ.Socket> delmark = new HashMap<Integer,ZMQ.Socket>();
+		this.connectSet = new HashSet<String> (this.serverList);
+		HashMap<String, ZMQ.Socket> delmark = new HashMap<String, ZMQ.Socket>();
 		
-		for (HashMap.Entry<Integer,ZMQ.Socket> entry: this.socketDict.entrySet()){
+		for (HashMap.Entry<String,ZMQ.Socket> entry: this.socketDict.entrySet()){
 			try{
 				logger.info("[Node] Closing connection: "+entry.getKey().toString());
 				entry.getValue().setLinger(0);
@@ -382,11 +390,11 @@ public class ZMQNode implements NetworkInterface, Runnable {
 			}
 		}
 		
-		for (HashMap.Entry<Integer, ZMQ.Socket> entry: delmark.entrySet()){
+		for (HashMap.Entry<String, ZMQ.Socket> entry: delmark.entrySet()){
 			this.socketDict.remove(entry.getKey());
 		}
 		
-		this.socketDict = new HashMap<Integer, ZMQ.Socket>();
+		this.socketDict = new HashMap<String, ZMQ.Socket>();
 		
 		while (this.socketDict.size() < this.majority){
 			try {
@@ -424,8 +432,13 @@ public class ZMQNode implements NetworkInterface, Runnable {
 		}
 	}
 	
-	public Map<Integer, netState> getConnectDict(){
-		return (Map<Integer, netState>) Collections.unmodifiableMap(this.connectDict);
+	@Override
+	public Map<String, netState> getConnectDict(){
+		return (Map<String, netState>) Collections.unmodifiableMap(this.connectDict);
+	}
+	
+	public Map<String, Integer> getnetControllerIDStatic(){
+		return (Map<String, Integer>) Collections.unmodifiableMap(this.netcontrollerIDStatic);
 	}
 
 	/**
@@ -437,15 +450,18 @@ public class ZMQNode implements NetworkInterface, Runnable {
 	@Override
 	public void updateConnectDict() {
 		// TODO Auto-generated method stub
-		this.connectDict = new HashMap<Integer, netState>();
+		this.connectDict     = new HashMap<String, netState>();
+		this.netcontrollerID = new HashMap<Integer, String>();
 		
-		for (Integer seten: this.connectSet){
+		for (String seten: this.connectSet){
 			this.connectDict.put(seten, netState.OFF);
 		}
 		
-		for (HashMap.Entry<Integer, ZMQ.Socket> entry: this.socketDict.entrySet()){
+		for (HashMap.Entry<String, ZMQ.Socket> entry: this.socketDict.entrySet()){
 			this.connectDict.put(entry.getKey(), netState.ON);
+			this.netcontrollerID.put(this.netcontrollerIDStatic.get(entry.getKey()), entry.getKey());
 		}
+		
 		
 	}
 

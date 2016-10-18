@@ -59,7 +59,7 @@ public class LDFilterQueue implements IFilterQueue {
 			}
 			if( !LDupds.isEmpty() ){
 				logger.info("[FilterQ] The update after drain: {} ", new Object [] {LDupds.toString()});
-				syncAdapter.packJSON(LDupds);
+//				syncAdapter.packJSON(LDupds);
 				return true;
 			} else {
 				logger.info("The linked list is empty");

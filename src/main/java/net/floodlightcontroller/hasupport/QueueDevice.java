@@ -8,23 +8,23 @@ import org.zeromq.ZMQ;
 import org.zeromq.ZMQException;
 import org.zeromq.ZMQQueue;
 
+/**
+ * The Queue Device
+ * @author Bhargav Srinivasan
+ */
+
 public class QueueDevice implements Runnable{
 
 	private static Logger logger = LoggerFactory.getLogger(QueueDevice.class);
 	
-	public final Integer serverPort;
-	public final Integer clientPort;
+	public final String serverPort;
+	public final String clientPort;
 	
-	public QueueDevice(int servePort, int clienPort) {
+	public QueueDevice(String servePort, String clienPort) {
 		// TODO Auto-generated constructor stub
-		this.serverPort = servePort;
-		this.clientPort = clienPort;
-	}
-
-
-	public QueueDevice(Integer servePort,Integer clienPort){
-		this.serverPort = servePort;
-		this.clientPort = clienPort;
+		// Chops "127.0.0.1:" to return the server and client port.
+		this.serverPort = servePort.substring(10);
+		this.clientPort = clienPort.substring(10);
 	}
 	
 	
