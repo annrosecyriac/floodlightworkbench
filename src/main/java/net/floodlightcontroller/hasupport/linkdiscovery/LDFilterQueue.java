@@ -28,6 +28,7 @@ public class LDFilterQueue implements IFilterQueue {
 	public boolean enqueueForward(JSONObject value) {
 		// TODO Auto-generated method stub
 		try {
+			logger.info("[FilterQ] Has been called.");
 			this.mdEnc = MessageDigest.getInstance("MD5");
 			this.mdEnc.digest(value.toString().getBytes());
 			String md5 = new BigInteger(1, this.mdEnc.digest()).toString(16);
@@ -56,10 +57,11 @@ public class LDFilterQueue implements IFilterQueue {
 			ArrayList<JSONObject> LDupds = new ArrayList<JSONObject>();
 			if( !filterQueue.isEmpty() ){
 				filterQueue.drainTo(LDupds);
+				filterQueue.clear();
 			}
 			if( !LDupds.isEmpty() ){
 				logger.info("[FilterQ] The update after drain: {} ", new Object [] {LDupds.toString()});
-//				syncAdapter.packJSON(LDupds);
+				syncAdapter.packJSON(LDupds);
 				return true;
 			} else {
 				logger.info("The linked list is empty");

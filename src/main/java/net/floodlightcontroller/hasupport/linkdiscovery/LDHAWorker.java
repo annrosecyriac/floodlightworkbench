@@ -62,13 +62,11 @@ public class LDHAWorker implements IHAWorker, ILDHAWorkerService, IFloodlightMod
 	public boolean publishHook() {
 		// TODO Auto-generated method stub
 		try{
-			synchronized (synLDUList){
-				logger.info("Printing Update {}: ",new Object[]{synLDUList});
-				myLDFilterQueue.enqueueForward(assembleUpdate());
-				synLDUList.clear();
-				TimeUnit.SECONDS.sleep(5);
-				myLDFilterQueue.dequeueForward();
-			}
+			logger.info("Printing Update {}: ",new Object[]{synLDUList});
+			myLDFilterQueue.enqueueForward(assembleUpdate());
+			synLDUList.clear();
+			TimeUnit.SECONDS.sleep(5);
+			myLDFilterQueue.dequeueForward();
 			return true;
 		} catch (Exception e){
 			logger.info("[LDHAWorker] An exception occoured!");
@@ -107,7 +105,6 @@ public class LDHAWorker implements IHAWorker, ILDHAWorkerService, IFloodlightMod
 	public void linkDiscoveryUpdate(List<LDUpdate> updateList) {
 		// TODO Auto-generated method stub
 		synchronized(synLDUList){
-			//synLDUList.clear();
 			for (LDUpdate update: updateList){	
 				synLDUList.add(update.toString());
 			}

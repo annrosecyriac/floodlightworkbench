@@ -2,6 +2,7 @@ package net.floodlightcontroller.hasupport.linkdiscovery;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -28,7 +29,7 @@ public class LDSyncAdapter implements ISyncAdapter, IFloodlightModule, IStoreLis
 
 	protected static Logger logger = LoggerFactory.getLogger(LDSyncAdapter.class);
 	protected static ISyncService syncService;
-	protected static IStoreClient<String, JSONObject> storeLD;
+	protected static IStoreClient<String, Map> storeLD;
 	protected static IFloodlightProviderService floodlightProvider;
 	private String controllerId;
 
@@ -42,7 +43,8 @@ public class LDSyncAdapter implements ISyncAdapter, IFloodlightModule, IStoreLis
 		try {
 			Integer i = new Integer(0);
 			for (JSONObject update: updates){
-				LDSyncAdapter.storeLD.put((controllerId+i.toString()), update);
+				Map<String,Object> updateMap = update.toMap();
+				LDSyncAdapter.storeLD.put((controllerId+i.toString()), updateMap);
 				logger.info("+++++++++++++ Retrieving from DB: CID:{}, Update:{}", 
 	                    new Object[] {
 	                            controllerId,
@@ -105,7 +107,7 @@ public class LDSyncAdapter implements ISyncAdapter, IFloodlightModule, IStoreLis
             LDSyncAdapter.storeLD = LDSyncAdapter.syncService
             		.getStoreClient("LDUpdates", 
             				String.class, 
-            				JSONObject.class);
+            				Map.class);
             LDSyncAdapter.storeLD.addStoreListener(this);
         } catch (SyncException e) {
             throw new FloodlightModuleException("Error while setting up sync service", e);
@@ -119,17 +121,19 @@ public class LDSyncAdapter implements ISyncAdapter, IFloodlightModule, IStoreLis
 		while(keys.hasNext()){
 	        String k = keys.next();
 	        try {
-	            String value = storeLD.get(k).getValue().toString();
+	            Map<String, Object> value = storeLD.get(k).getValue();
+	            JSONObject x = new JSONObject(value);
+	            
 				logger.info("+++++++++++++ Retriving value from DB: Key:{}, Value:{}, Type: {}", 
 	                    new Object[] {
-	                            k, 
-	                            value, 
+	                            k.toString(), 
+	                            x.toString(), 
 	                            type.name()
 	                        }
 	                    );
 	            if(type.name().equals("REMOTE")){
-	                String info = value;
-	                logger.info("++++++++++++++++ REMOTE: Key:{}, Value:{}", k, info);
+	                // String info = value;
+	                // logger.info("++++++++++++++++ REMOTE: Key:{}, Value:{}", k, info);
 	            }
 	        } catch (SyncException e) {
 	            e.printStackTrace();
