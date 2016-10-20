@@ -4,6 +4,7 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -19,6 +20,8 @@ import net.floodlightcontroller.threadpool.IThreadPoolService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import jdk.nashorn.internal.runtime.regexp.joni.Config;
+
 /**
  * The HAController
  * @author Bhargav Srinivasan
@@ -29,7 +32,7 @@ public class HAController implements IFloodlightModule {
 	private static Logger logger = LoggerFactory.getLogger(HAController.class);
 	protected static IThreadPoolService threadPoolService;
 	protected static SingletonTask electionTask;
-	
+	private static Map<String, String> config = new HashMap<String, String>();
 	
 	public static void setSysPath(){
 		try {
@@ -76,6 +79,8 @@ public class HAController implements IFloodlightModule {
 		logger = LoggerFactory.getLogger(HAController.class);
 		threadPoolService = context.getServiceImpl(IThreadPoolService.class);
 		setSysPath();
+		config = context.getConfigParams(this);
+		logger.info("Configuration parameters: {} {} ", new Object[] {config.toString(), config.get("nodeid")});
 	}
 
 	@Override
@@ -85,7 +90,7 @@ public class HAController implements IFloodlightModule {
 		//Read config file and start the Election class with the right params.
 		
 		ScheduledExecutorService ses = threadPoolService.getScheduledExecutor();
-		electionTask = new SingletonTask(ses, new AsyncElection("127.0.0.1:4242","127.0.0.1:5252","1"));		
+		electionTask = new SingletonTask(ses, new AsyncElection( config.get("serverPort") ,config.get("clientPort"), config.get("nodeid") ));		
 		try{
 			electionTask.reschedule(1, TimeUnit.SECONDS);
 		} catch (Exception e){

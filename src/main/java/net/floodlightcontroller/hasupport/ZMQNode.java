@@ -3,6 +3,7 @@ package net.floodlightcontroller.hasupport;
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -25,6 +26,8 @@ public class ZMQNode implements NetworkInterface, Runnable {
 	private static Logger logger = LoggerFactory.getLogger(ZMQNode.class);
 	
 	private ZMQ.Context zmqcontext = ZMQ.context(10);
+	
+	ArrayList<Thread> serverThreads = new ArrayList<Thread>();
 	
 	public final String controllerID;
 	public final String serverPort;
@@ -97,6 +100,7 @@ public class ZMQNode implements NetworkInterface, Runnable {
 		}
 		logger.info("Other Servers: "+this.connectSet.toString()+"Majority: "+this.majority);
 		
+		
 	}
 	
 	public void preStart(){
@@ -126,6 +130,51 @@ public class ZMQNode implements NetworkInterface, Runnable {
 		} catch(Exception e){
 			e.printStackTrace();
 		}
+	}
+	
+	public void joinServerThreads(){
+		try{
+			for (int i=0; i < serverThreads.size(); i++){
+					serverThreads.get(i).join(); 
+			}
+		} catch (InterruptedException ie){
+			logger.info("[Node] Was interrrupted! "+ie.toString());
+			ie.printStackTrace();
+		} catch (Exception e){
+			e.printStackTrace();
+			logger.info("[Node] Exception in joinServerThreads");
+		}
+		
+	}
+	
+	public void startServers(){
+		
+		Integer noServers = new Integer(0);
+		ZMQServer serverTh = new ZMQServer(this.serverPort);
+		
+		if (this.totalRounds <= 1){
+			noServers = 1;
+		} else {
+			// TODO CHANGE TO LOG10
+			noServers = (this.totalRounds/3);
+		}
+		
+		if(noServers <= 1){
+			noServers =1;
+		}
+		
+		try{
+			for (Integer i=0; i < noServers; i++){
+				Thread tx = new Thread (serverTh, "ZMQServers");
+				logger.info("Starting server "+i.toString()+"...");
+				tx.start();
+				serverThreads.add(tx);
+			}
+		} catch (Exception e){
+			logger.info("[Node] startServers was interrrupted! "+e.toString());
+			e.printStackTrace();
+		}
+		
 	}
 	
 	@Override
@@ -209,6 +258,7 @@ public class ZMQNode implements NetworkInterface, Runnable {
 				clientSock.send("PULSE");
 				byte[] rep = clientSock.recv();
 				String reply = new String(rep);
+				
 				if(reply.equals(new String("ACK"))){
 					logger.info("[Node] Client: "+client.toString()+"Client Sock: "+clientSock.toString());
 					if (!socketDict.containsKey(client)){
@@ -422,6 +472,8 @@ public class ZMQNode implements NetworkInterface, Runnable {
 			logger.info("Server List: "+this.serverList.toString());
 			Thread t1 = new Thread(new QueueDevice(this.serverPort,this.clientPort), "QueueDeviceThread");
 			t1.start();
+			startServers();
+			joinServerThreads();
 			t1.join();
 		} catch (InterruptedException ie){
 			logger.info("Queue Device was interrupted! "+ie.toString());
@@ -461,6 +513,11 @@ public class ZMQNode implements NetworkInterface, Runnable {
 			this.connectDict.put(entry.getKey(), netState.ON);
 			this.netcontrollerID.put(this.netcontrollerIDStatic.get(entry.getKey()), entry.getKey());
 		}
+		
+		logger.info("Connect Dict: "+this.connectDict.toString());
+		logger.info("Socket Dict: "+this.socketDict.toString());
+		
+		return;
 		
 		
 	}

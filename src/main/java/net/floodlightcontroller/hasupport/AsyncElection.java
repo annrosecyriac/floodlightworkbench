@@ -9,6 +9,7 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import net.floodlightcontroller.hasupport.NetworkInterface.ElectionState;
 import net.floodlightcontroller.hasupport.NetworkInterface.netState;
 
 /**
@@ -36,7 +37,6 @@ public class AsyncElection implements Runnable{
 	private String leader  = new String();
 	private String tempLeader = new String();
 	
-	public enum ElectionState{CONNECT,ELECT,COORDINATE,SPIN};
 	private ElectionState currentState = ElectionState.CONNECT;
 	
 	/**
@@ -361,7 +361,7 @@ public class AsyncElection implements Runnable{
 				case CONNECT:
 					
 					// Block until a majority of the servers have connected.
-					network.blockUntilConnected();
+					this.currentState =  network.blockUntilConnected();
 					
 					// Majority of the servers have connected, moving on to elect.
 					break;

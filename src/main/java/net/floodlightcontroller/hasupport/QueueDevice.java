@@ -40,6 +40,7 @@ public class QueueDevice implements Runnable{
 			 * Connection facing the outside, where other nodes can connect 
 			 * to this node. (frontend)
 			 */
+
 			ZMQ.Socket clientSide = zmqcontext.socket(ZMQ.ROUTER);
 			clientSide.bind("tcp://0.0.0.0:"+this.clientPort.toString());
 			
