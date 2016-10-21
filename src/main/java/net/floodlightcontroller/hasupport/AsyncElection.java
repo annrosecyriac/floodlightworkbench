@@ -14,6 +14,11 @@ import net.floodlightcontroller.hasupport.NetworkInterface.netState;
 
 /**
  * The Election class 
+ * 
+ * TODO: LEADER shouldn't be null, should be enum UNSET
+ * before election.
+ * Pre-declare all messages as private final strings.
+ * 
  * @author Bhargav Srinivasan
  */
 
