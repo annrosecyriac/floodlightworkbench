@@ -204,21 +204,21 @@ public class AsyncElection implements Runnable{
 					
 					network.send(entry.getKey(), new String("LEADER ") + network.controllerID );
 					String reply = network.recv(entry.getKey());
-					logger.info("[Election sendLeaderMsg] REPLY FOR LEADOK: " + reply);
-					String[] lok = reply.split(" ");
-					acceptors.add(lok[1]);
+					if( reply.equals(new String("LEADOK")) ){
+						acceptors.add(entry.getKey());
+					}
 				}
 				
-				if( acceptors.size() >= network.majority ){
-					logger.info("[Election sendLeaderMsg] Accepted leader: "+this.controllerID+" Majority: "+network.majority+"Acceptors: "+acceptors.toString());
-					this.leader = network.controllerID;
-					this.currentState = ElectionState.COORDINATE;
-				} else {
-					logger.info("[Election sendLeaderMsg] Did not accept leader: "+this.controllerID+" Majority: "+network.majority+"Acceptors: "+acceptors.toString());
-					this.leader = none;
-					this.currentState = ElectionState.ELECT;
-				}
-				
+			}
+			
+			if( acceptors.size() >= network.majority ){
+				logger.info("[Election sendLeaderMsg] Accepted leader: "+this.controllerID+" Majority: "+network.majority+"Acceptors: "+acceptors.toString());
+				this.leader = network.controllerID;
+				this.currentState = ElectionState.COORDINATE;
+			} else {
+				logger.info("[Election sendLeaderMsg] Did not accept leader: "+this.controllerID+" Majority: "+network.majority+"Acceptors: "+acceptors.toString());
+				this.leader = none;
+				this.currentState = ElectionState.ELECT;
 			}
 			
 			return;
@@ -342,8 +342,7 @@ public class AsyncElection implements Runnable{
 		
 		logger.info(" +++++++++ [Election Logic] Nodes participating: "+nodes.toString());
 		
-		// Now convert those CIDs to the respective ports.
-		// Need to add local node into connection dict as well.
+		// TODO Something weird is going on here...
 		
 		// Edge case where you are the max node && you are ON.
 		if( network.controllerID.compareTo(maxNode.toString()) == 0 ){

@@ -32,7 +32,7 @@ public class ZMQServer implements Runnable{
 	
 	private final String ack      = new String ("ACK");
 	private final String no       = new String ("NO");
-	private final String lead     = new String ("LEADER");
+	private final String lead     = new String ("LEADOK");
 	private final String dc       = new String ("DONTCARE");
 	
 	
@@ -118,7 +118,7 @@ public class ZMQServer implements Runnable{
 			logger.info("[ZMQServer] Get tempLeader: "+this.aelection.gettempLeader()+" "+l);
 			
 			if( this.aelection.gettempLeader().equals(l) ) {
-				return new String(this.lead + " " + l);
+				return new String(this.lead);
 			} else {
 				return no;
 			}
