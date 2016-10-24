@@ -27,8 +27,6 @@ public class ZMQNode implements NetworkInterface, Runnable {
 	
 	private ZMQ.Context zmqcontext = ZMQ.context(10);
 	
-	ArrayList<Thread> serverThreads = new ArrayList<Thread>();
-	
 	public final String controllerID;
 	public final String serverPort;
 	public final String clientPort;
@@ -51,7 +49,7 @@ public class ZMQNode implements NetworkInterface, Runnable {
 	
 	public HashMap<String, ZMQ.Socket>  socketDict             = new HashMap<String, ZMQ.Socket>();
 	public HashMap<String, netState>    connectDict            = new HashMap<String, netState>();
-	public HashMap<Integer, String>     netcontrollerID        = new HashMap<Integer, String>();
+	public HashMap<String, String>      controllerIDNetStatic  = new HashMap<String, String>();
 	public HashMap<String, Integer>     netcontrollerIDStatic  = new HashMap<String, Integer>();
 	
 	/**
@@ -116,6 +114,7 @@ public class ZMQNode implements NetworkInterface, Runnable {
 				this.serverList.add(new String(line.trim()));
 				this.allServerList.add(new String(line.trim()));
 				this.netcontrollerIDStatic.put(new String(line.trim()), cidIter);
+				this.controllerIDNetStatic.put(cidIter.toString(), new String(line.trim()) );
 				cidIter += 1;
 			}
 			
@@ -132,54 +131,15 @@ public class ZMQNode implements NetworkInterface, Runnable {
 		}
 	}
 	
-	public void joinServerThreads(){
-		try{
-			for (int i=0; i < serverThreads.size(); i++){
-					serverThreads.get(i).join(); 
-			}
-		} catch (InterruptedException ie){
-			logger.info("[Node] Was interrrupted! "+ie.toString());
-			ie.printStackTrace();
-		} catch (Exception e){
-			e.printStackTrace();
-			logger.info("[Node] Exception in joinServerThreads");
-		}
-		
-	}
-	
-	public void startServers(){
-		
-		Integer noServers = new Integer(0);
-		ZMQServer serverTh = new ZMQServer(this.serverPort);
-		
-		if (this.totalRounds <= 1){
-			noServers = 1;
-		} else {
-			// TODO CHANGE TO LOG10
-			noServers = (this.totalRounds/3);
-		}
-		
-		if(noServers <= 1){
-			noServers =1;
-		}
-		
-		try{
-			for (Integer i=0; i < noServers; i++){
-				Thread tx = new Thread (serverTh, "ZMQServers");
-				logger.info("Starting server "+i.toString()+"...");
-				tx.start();
-				serverThreads.add(tx);
-			}
-		} catch (Exception e){
-			logger.info("[Node] startServers was interrrupted! "+e.toString());
-			e.printStackTrace();
-		}
-		
-	}
+
 	
 	@Override
 	public Boolean send(String clientPort, String message) {
 		// TODO Auto-generated method stub
+		if( message.equals(null) ) {
+			return Boolean.FALSE;
+		}
+		
 		ZMQ.Socket clientSock = socketDict.get(clientPort);
 		try{
 			clientSock.send(message);
@@ -330,6 +290,8 @@ public class ZMQNode implements NetworkInterface, Runnable {
 		// TODO Auto-generated method stub
 		this.connectSet = new HashSet<String> (this.serverList);
 		
+		expireOldConnections();
+		
 		doConnect();
 		
 		updateConnectDict();
@@ -373,7 +335,7 @@ public class ZMQNode implements NetworkInterface, Runnable {
 					entry.getValue().close();
 					delmark.put(entry.getKey(),entry.getValue());
 				}
-				ze.printStackTrace();
+				//ze.printStackTrace();
 			} catch (Exception e){
 				logger.info("[Node] Expire: Exception! : "+entry.getKey().toString());
 				if(entry.getValue() != null){
@@ -472,8 +434,6 @@ public class ZMQNode implements NetworkInterface, Runnable {
 			logger.info("Server List: "+this.serverList.toString());
 			Thread t1 = new Thread(new QueueDevice(this.serverPort,this.clientPort), "QueueDeviceThread");
 			t1.start();
-			startServers();
-			joinServerThreads();
 			t1.join();
 		} catch (InterruptedException ie){
 			logger.info("Queue Device was interrupted! "+ie.toString());
@@ -503,7 +463,6 @@ public class ZMQNode implements NetworkInterface, Runnable {
 	public void updateConnectDict() {
 		// TODO Auto-generated method stub
 		this.connectDict     = new HashMap<String, netState>();
-		this.netcontrollerID = new HashMap<Integer, String>();
 		
 		for (String seten: this.connectSet){
 			this.connectDict.put(seten, netState.OFF);
@@ -511,7 +470,6 @@ public class ZMQNode implements NetworkInterface, Runnable {
 		
 		for (HashMap.Entry<String, ZMQ.Socket> entry: this.socketDict.entrySet()){
 			this.connectDict.put(entry.getKey(), netState.ON);
-			this.netcontrollerID.put(this.netcontrollerIDStatic.get(entry.getKey()), entry.getKey());
 		}
 		
 		logger.info("Connect Dict: "+this.connectDict.toString());

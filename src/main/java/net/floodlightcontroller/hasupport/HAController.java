@@ -34,6 +34,8 @@ public class HAController implements IFloodlightModule {
 	protected static SingletonTask electionTask;
 	private static Map<String, String> config = new HashMap<String, String>();
 	
+
+	
 	public static void setSysPath(){
 		try {
 			final Field usrPathsField = ClassLoader.class.getDeclaredField("usr_paths");
@@ -49,7 +51,7 @@ public class HAController implements IFloodlightModule {
 		}
 		
 		return;
-	}
+	}	
 
 	
 	@Override
@@ -91,6 +93,7 @@ public class HAController implements IFloodlightModule {
 		
 		ScheduledExecutorService ses = threadPoolService.getScheduledExecutor();
 		electionTask = new SingletonTask(ses, new AsyncElection( config.get("serverPort") ,config.get("clientPort"), config.get("nodeid") ));		
+		
 		try{
 			electionTask.reschedule(1, TimeUnit.SECONDS);
 		} catch (Exception e){
