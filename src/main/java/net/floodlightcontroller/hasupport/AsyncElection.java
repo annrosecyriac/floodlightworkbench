@@ -332,40 +332,48 @@ public class AsyncElection implements Runnable{
 	private void electionLogic(){
 		// List of controllerIDs of all nodes.
 		ArrayList<Integer> nodes = new ArrayList<Integer>();
+		Integer maxNode = new Integer(0);
 		
 		// Generate list of total possible CIDs.
 		for (Integer i = (network.totalRounds+1) ; i > 0 ; i--){
 			nodes.add(i);
 		}
 		
-		Integer maxNode = new Integer(Collections.max(nodes));
+		Collections.sort(nodes);
+		Collections.reverse(nodes);
 		
 		logger.info(" +++++++++ [Election Logic] Nodes participating: "+nodes.toString());
 		
 		// TODO Something weird is going on here...
 		
-		// Edge case where you are the max node && you are ON.
-		if( network.controllerID.compareTo(maxNode.toString()) == 0 ){
-				this.leader = maxNode.toString();
-				logger.info(" +++++++ [Election Logic] I am the Max Node, I am the leader: ");
-				return;
+		// Get the node whose CID is numerically greater.
+		Set<String> connectDictKeys =  network.connectDict.keySet();
+		HashSet<Integer> activeCIDs = new HashSet<Integer>();
+		
+		// Convert active controller ports into a Set of their IDs.
+		for (String port: connectDictKeys) {
+			activeCIDs.add(network.netcontrollerIDStatic.get(port));
 		}
 		
-		// Get the node whose CID is numerically greater && is ON.
-		// TODO clean this up!!
-		try{
-			for (int i =0; i < nodes.size(); i++){
-				if( network.connectDict.get(  network.controllerIDNetStatic.get( nodes.get(i) )  ).equals(netState.ON) ){
-					maxNode = nodes.get(i);
-					logger.info(" +++++++ [Election Logic] Max Node: "+maxNode.toString());
-					break;
-				}
+		logger.info("Active controllers: "+activeCIDs.toString()+"ConnectDict Keys: "+connectDictKeys.toString());
+		
+		// Find the current active maxNode.
+		
+		for (Integer i=0 ; i< nodes.size(); i++ ) {
+			if ( activeCIDs.contains(nodes.get(i)) ) {
+				maxNode = nodes.get(i);
+				break;
 			}
-		} catch (Exception e) {
-			logger.info("I am the max node.");
 		}
 		
-		String maxNodePort = network.controllerIDNetStatic.get(maxNode).toString();
+		// Edge case where you are the max node && you are ON.
+		if ( new Integer(this.controllerID) >= maxNode ){
+			maxNode = new Integer(this.controllerID);
+			setLeader(maxNode.toString());
+			return;
+		}
+		
+		String maxNodePort = network.controllerIDNetStatic.get(maxNode.toString()).toString();
 		
 		// Check if Max Node is alive, and set it as leader if it is.
 		try{
@@ -375,8 +383,8 @@ public class AsyncElection implements Runnable{
 				network.send(maxNodePort, new String("PULSE"));
 				String reply = network.recv(maxNodePort);
 				
-				if ( reply.equals(new String("ACK")) ){
-					this.leader = maxNode.toString();
+				if ( reply.equals(ack) ){
+					setLeader(maxNode.toString());
 				}
 			}
 			
