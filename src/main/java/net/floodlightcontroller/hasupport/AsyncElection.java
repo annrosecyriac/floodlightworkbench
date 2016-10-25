@@ -130,6 +130,8 @@ public class AsyncElection implements Runnable{
 		// The Leader will send a HEARTBEAT message in the COORDINATE state
 		// after the election and will expect a reply from a majority of
 		// acceptors.
+		
+		
 		HashSet<String> noSet = new HashSet<String>();
 		try{
 			
@@ -141,7 +143,7 @@ public class AsyncElection implements Runnable{
 					String reply = network.recv(entry.getKey());
 					
 					if ( reply.equals(new String("NO")) ){
-						noSet.add(reply);
+						noSet.add(entry.getKey());
 					}
 					// If we get an ACK, that's good.
 					logger.info("[Election] Received HEARTBEAT ACK from "+entry.getKey().toString());
@@ -149,7 +151,7 @@ public class AsyncElection implements Runnable{
 			}
 			
 			if(noSet.size() >= network.majority){
-				this.leader = none;
+				setLeader(none);
 			}
 			
 			return;
@@ -213,11 +215,11 @@ public class AsyncElection implements Runnable{
 			
 			if( acceptors.size() >= network.majority ){
 				logger.info("[Election sendLeaderMsg] Accepted leader: "+this.controllerID+" Majority: "+network.majority+"Acceptors: "+acceptors.toString());
-				this.leader = network.controllerID;
+				setLeader(network.controllerID);
 				this.currentState = ElectionState.COORDINATE;
 			} else {
 				logger.info("[Election sendLeaderMsg] Did not accept leader: "+this.controllerID+" Majority: "+network.majority+"Acceptors: "+acceptors.toString());
-				this.leader = none;
+				setLeader(none);
 				this.currentState = ElectionState.ELECT;
 			}
 			
@@ -246,7 +248,7 @@ public class AsyncElection implements Runnable{
 					String reply = network.recv(entry.getKey());
 					
 					if ( reply.equals(new String("NO")) ){
-						noSet.add(reply);
+						noSet.add(entry.getKey());
 					}
 					
 					// If we get an ACK, that's good.
@@ -255,7 +257,7 @@ public class AsyncElection implements Runnable{
 			}
 			
 			if(noSet.size() >= network.majority){
-				this.leader = none;
+				setLeader(none);
 			}
 			
 			return;
@@ -308,17 +310,21 @@ public class AsyncElection implements Runnable{
 			
 			
 			if( leaderSet.size() == 1 ){
-				 this.leader = leaderSet.stream()
-										.findFirst().get();
+				 setLeader(leaderSet.stream()
+										.findFirst().get()); 
 			} else if ( leaderSet.size() > 1 ){
-				this.leader = none;
+				setLeader(none);
 				logger.info("[Election checkForLeader] SPLIT BRAIN!!");
 				logger.info("[Election checkForLeader] Current Leader is null");
 			} else if ( leaderSet.size() < 1 ){
-				this.leader = none;
+				setLeader(none);
 				logger.info("[Election checkForLeader] Current Leader is null "+ this.leader.toString() );
 			}
-
+			
+			if( this.leader.equals(none) ){
+				this.currentState = ElectionState.ELECT;
+				return;
+			}
 			
 			return;
 			
@@ -352,7 +358,9 @@ public class AsyncElection implements Runnable{
 		
 		// Convert active controller ports into a Set of their IDs.
 		for (String port: connectDictKeys) {
-			activeCIDs.add(network.netcontrollerIDStatic.get(port));
+			if ( network.connectDict.get(port) != null  && network.connectDict.get(port).equals(netState.ON) ) {
+				activeCIDs.add(network.netcontrollerIDStatic.get(port));
+			}
 		}
 		
 		logger.info("Active controllers: "+activeCIDs.toString()+"ConnectDict Keys: "+connectDictKeys.toString());
@@ -415,8 +423,8 @@ public class AsyncElection implements Runnable{
 		}
 		
 		// Clear leader variables.
-		this.tempLeader = none;
-		this.leader	 	= none;
+		setTempLeader(none);
+		setLeader(none);
 		
 		// Check if actually in elect state
 		if (!(this.currentState == ElectionState.ELECT)){
@@ -447,7 +455,9 @@ public class AsyncElection implements Runnable{
 			logger.info("[ELection] I WON THE ELECTION!");
 			this.sendIWon();
 			this.sendLeaderMsg();
-			this.setAsLeader();
+			if(this.leader.equals(network.controllerID)) {
+				this.setAsLeader();
+			}
 		} else if ( this.leader.equals(none) ){
 			this.currentState = ElectionState.ELECT;
 		} else {
@@ -525,7 +535,9 @@ public class AsyncElection implements Runnable{
 					// Keep the leader in coordinate state.
 					this.sendIWon();
 					this.sendLeaderMsg();
-					this.setAsLeader();
+					if(this.leader.equals(network.controllerID)) {
+						this.setAsLeader();
+					}
 					
 					// Keep sending a heartbeat message, and receive a majority of acceptors,
 					// otherwise go to the elect state.

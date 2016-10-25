@@ -74,7 +74,7 @@ public class ZMQServer implements Runnable{
 				logger.info("[ZMQServer] ZMQ Exception in server (nothing received) !");
 			} catch (Exception e){
 				//e.printStackTrace();
-				logger.info("[ZMQServer] Exception in server!");
+				//logger.info("[ZMQServer] Exception in server!");
 			}
 		}
 		
@@ -132,7 +132,7 @@ public class ZMQServer implements Runnable{
 			
 			logger.info("[ZMQServer] Get Leader: "+this.aelection.getLeader()+" "+port);
 			
-			if(! this.aelection.getLeader().equals(this.controllerID) ) {
+			if(! this.aelection.gettempLeader().equals(this.controllerID) ) {
 				if ( this.aelection.gettempLeader().equals(port) ) {
 					this.aelection.setLeader(port);
 					return new String (ack);

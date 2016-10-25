@@ -42,6 +42,8 @@ public class ZMQNode implements NetworkInterface, Runnable {
 	public LinkedList<String> allServerList = new LinkedList<String>();
 	public HashSet<String>    connectSet = new HashSet<String>();
 	
+	private final String ack = new String("ACK");
+	
 	/**
 	 * Holds the connection state/ socket object for each of the client
 	 * connections.
@@ -313,7 +315,7 @@ public class ZMQNode implements NetworkInterface, Runnable {
 				}
 				String reply = new String(rep);
 				
-				if (reply != "ACK"){
+				if (!reply.equals(ack)) {
 					logger.info("[Node] Closing stale connection: "+entry.getKey().toString());
 					entry.getValue().setLinger(0);
 					entry.getValue().close();
@@ -322,27 +324,15 @@ public class ZMQNode implements NetworkInterface, Runnable {
 				
 			} catch(NullPointerException ne){
 				logger.info("[Node] Expire: Reply had a null value: "+entry.getKey().toString());
-				if(entry.getValue() != null){
-					entry.getValue().setLinger(0);
-					entry.getValue().close();
-					delmark.put(entry.getKey(),entry.getValue());
-				}
+				delmark.put(entry.getKey(),entry.getValue());
 				//ne.printStackTrace();
 			} catch(ZMQException ze){
 				logger.info("[Node] Expire: ZMQ socket error: "+entry.getKey().toString());
-				if(entry.getValue() != null){
-					entry.getValue().setLinger(0);
-					entry.getValue().close();
-					delmark.put(entry.getKey(),entry.getValue());
-				}
+				delmark.put(entry.getKey(),entry.getValue());
 				//ze.printStackTrace();
 			} catch (Exception e){
 				logger.info("[Node] Expire: Exception! : "+entry.getKey().toString());
-				if(entry.getValue() != null){
-					entry.getValue().setLinger(0);
-					entry.getValue().close();
-					delmark.put(entry.getKey(),entry.getValue());
-				}
+				delmark.put(entry.getKey(),entry.getValue());
 				e.printStackTrace();
 			}
 		}
@@ -377,27 +367,15 @@ public class ZMQNode implements NetworkInterface, Runnable {
 				
 			} catch(NullPointerException ne){
 				logger.info("[Node] BlockUntil: Reply had a null value"+entry.getKey().toString());
-				if(entry.getValue() != null){
-					entry.getValue().setLinger(0);
-					entry.getValue().close();
-					delmark.put(entry.getKey(),entry.getValue());
-				}
+				delmark.put(entry.getKey(),entry.getValue());
 				//ne.printStackTrace();
 			} catch (ZMQException ze){
 				logger.info("[Node] Error closing connection: "+entry.getKey().toString());
-				if(entry.getValue() != null){
-					entry.getValue().setLinger(0);
-					entry.getValue().close();
-					delmark.put(entry.getKey(),entry.getValue());
-				}
-				ze.printStackTrace();
+				delmark.put(entry.getKey(),entry.getValue());
+				//ze.printStackTrace();
 			} catch (Exception e){
 				logger.info("[Node] Error closing connection: "+entry.getKey().toString());
-				if(entry.getValue() != null){
-					entry.getValue().setLinger(0);
-					entry.getValue().close();
-					delmark.put(entry.getKey(),entry.getValue());
-				}
+				delmark.put(entry.getKey(),entry.getValue());
 				e.printStackTrace();
 			}
 		}
