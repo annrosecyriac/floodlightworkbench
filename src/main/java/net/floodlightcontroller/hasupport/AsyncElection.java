@@ -551,7 +551,6 @@ public class AsyncElection implements Runnable{
 					// Keep sending a heartbeat message, and receive a majority of acceptors,
 					// otherwise go to the elect state.
 					this.sendHeartBeat();
-					
 					TimeUnit.SECONDS.sleep(this.chill.intValue());
 					
 					break;

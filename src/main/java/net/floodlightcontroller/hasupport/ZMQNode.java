@@ -42,7 +42,8 @@ public class ZMQNode implements NetworkInterface, Runnable {
 	public LinkedList<String> allServerList = new LinkedList<String>();
 	public HashSet<String>    connectSet = new HashSet<String>();
 	
-	private final String ack = new String("ACK");
+	private final String pulse  = new String("PULSE");
+	private final String ack    = new String("ACK");
 	
 	/**
 	 * Holds the connection state/ socket object for each of the client
@@ -71,6 +72,8 @@ public class ZMQNode implements NetworkInterface, Runnable {
 	 */
 	public final Integer majority;
 	public final Integer totalRounds;
+
+	
 	
 	
 	/**
@@ -216,11 +219,11 @@ public class ZMQNode implements NetworkInterface, Runnable {
 				clientSock.setReceiveTimeOut(this.socketTimeout);
 				clientSock.setSendTimeOut(this.socketTimeout);
 				
-				clientSock.send("PULSE");
+				clientSock.send(pulse);
 				byte[] rep = clientSock.recv();
 				String reply = new String(rep);
 				
-				if(reply.equals(new String("ACK"))){
+				if( reply.equals(ack) ){
 					logger.info("[Node] Client: "+client.toString()+"Client Sock: "+clientSock.toString());
 					if (!socketDict.containsKey(client)){
 						socketDict.put(client, clientSock);
@@ -309,12 +312,12 @@ public class ZMQNode implements NetworkInterface, Runnable {
 			try{
 				byte[] rep = null;
 				for(int i=0; i <= this.numberOfPulses; i++){
-					entry.getValue().send("PULSE");
+					entry.getValue().send(pulse);
 					rep = entry.getValue().recv();
 				}
 				String reply = new String(rep);
 				
-				if (!reply.equals(ack)) {
+				if (! reply.equals(ack) ) {
 					logger.info("[Node] Closing stale connection: "+entry.getKey().toString());
 					entry.getValue().setLinger(0);
 					entry.getValue().close();
