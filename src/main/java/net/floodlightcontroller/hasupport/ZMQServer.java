@@ -62,7 +62,7 @@ public class ZMQServer implements Runnable{
 	    serverSocket.setReceiveTimeOut(this.socketTimeout);
 		serverSocket.setSendTimeOut(this.socketTimeout);
 		
-		while(Boolean.TRUE){
+		while(! Thread.currentThread().isInterrupted() ) {
 			try{
 				byte[] rep = serverSocket.recv();
 				String stg = new String(rep);
@@ -74,7 +74,7 @@ public class ZMQServer implements Runnable{
 				logger.info("[ZMQServer] ZMQ Exception in server (nothing received) !");
 			} catch (Exception e){
 				//e.printStackTrace();
-				//logger.info("[ZMQServer] Exception in server!");
+				logger.info("[ZMQServer] Exception in server!");
 			}
 		}
 		
@@ -113,11 +113,10 @@ public class ZMQServer implements Runnable{
 			logger.info("[ZMQServer] Received LEADER message: " + mssg.toString());
 			
 			String [] le = mssg.split(" ");
-			String l     = le[1];
 			
-			logger.info("[ZMQServer] Get tempLeader: "+this.aelection.gettempLeader()+" "+l);
+			logger.info("[ZMQServer] Get tempLeader: "+this.aelection.gettempLeader()+" "+le[1]);
 			
-			if( this.aelection.gettempLeader().equals(l) ) {
+			if( this.aelection.gettempLeader().equals(le[1]) ) {
 				return new String(this.lead);
 			} else {
 				return no;
@@ -128,13 +127,12 @@ public class ZMQServer implements Runnable{
 			logger.info("[ZMQServer] Received SETLEAD message: " + mssg.toString());
 			
 			String [] setl = mssg.split(" ");
-			String port    = setl[1]; 
 			
-			logger.info("[ZMQServer] Get Leader: "+this.aelection.getLeader()+" "+port);
+			logger.info("[ZMQServer] Get Leader: "+this.aelection.getLeader()+" "+setl[1]);
 			
 			if(! this.aelection.gettempLeader().equals(this.controllerID) ) {
-				if ( this.aelection.gettempLeader().equals(port) ) {
-					this.aelection.setLeader(port);
+				if ( this.aelection.gettempLeader().equals(setl[1]) ) {
+					this.aelection.setLeader(setl[1]);
 					return new String (ack);
 				} else {
 					return no;
@@ -158,6 +156,7 @@ public class ZMQServer implements Runnable{
 			logger.info("[ZMQServer] Received HEARTBEAT message: " + mssg.toString());
 			
 			String[] hb = mssg.split(" ");
+			
 			if ( this.aelection.getLeader().equals(hb[1]) ) {
 				return ack;
 			} else {

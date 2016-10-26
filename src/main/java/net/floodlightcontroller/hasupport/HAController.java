@@ -20,8 +20,6 @@ import net.floodlightcontroller.threadpool.IThreadPoolService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import jdk.nashorn.internal.runtime.regexp.joni.Config;
-
 /**
  * The HAController
  * @author Bhargav Srinivasan
@@ -33,7 +31,7 @@ public class HAController implements IFloodlightModule {
 	protected static IThreadPoolService threadPoolService;
 	protected static SingletonTask electionTask;
 	private static Map<String, String> config = new HashMap<String, String>();
-	
+	private final String none = new String("none");
 
 	
 	public static void setSysPath(){
@@ -92,14 +90,26 @@ public class HAController implements IFloodlightModule {
 		//Read config file and start the Election class with the right params.
 		
 		ScheduledExecutorService ses = threadPoolService.getScheduledExecutor();
-		electionTask = new SingletonTask(ses, new AsyncElection( config.get("serverPort") ,config.get("clientPort"), config.get("nodeid") ));		
+		AsyncElection ael = new AsyncElection( config.get("serverPort") ,config.get("clientPort"), config.get("nodeid") );
+		electionTask = new SingletonTask(ses, ael);		
 		
 		try{
-			electionTask.reschedule(1, TimeUnit.SECONDS);
+			electionTask.reschedule(1, TimeUnit.NANOSECONDS);
+			long start = System.nanoTime();
+			while(! Thread.currentThread().isInterrupted()){
+				if(! ael.getLeader().toString().equals(none) ) {
+					Long duration = (long) ((System.nanoTime() - start) / 1000000.000) ;
+					logger.info("[HAController MEASURE] Got Leader: "+ael.getLeader().toString() + "Elapsed :"+ duration.toString());
+					break;
+				}
+			}
+			
 		} catch (Exception e){
 			logger.info("[Election] Was interrrupted! "+e.toString());
 			e.printStackTrace();
 		}
+		
+		
 	}
 	
 }

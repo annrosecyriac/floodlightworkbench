@@ -1,7 +1,6 @@
 package net.floodlightcontroller.hasupport;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -37,6 +36,10 @@ public class AsyncElection implements Runnable{
 		this.network       = new ZMQNode(serverPort,clientPort,controllerID);
 		this.serverPort    = serverPort;
 		this.controllerID  = controllerID;
+		this.setlead       = new String("SETLEAD "   + this.controllerID);
+		this.leadermsg     = new String("LEADER "    + this.controllerID);
+		this.iwon 		   = new String("IWON "      + this.controllerID);
+		this.heartbeat     = new String("HEARTBEAT " + this.controllerID);
 	}
 	
 	/**
@@ -46,15 +49,26 @@ public class AsyncElection implements Runnable{
 	private String tempLeader         = new String("none");
 	private final String none         = new String("none");
 	private final String ack 		  = new String("ACK");
+	private final String pulse        = new String("PULSE");
+	private final String you		  = new String("YOU?");
+	private final String no			  = new String("NO");
+	private final String leadok       = new String("LEADOK");
+	private final String iwon;
+	private final String setlead;
+	private final String leadermsg;
+	private final String heartbeat;
+	
 	
 	private ElectionState currentState = ElectionState.CONNECT;
 
+	private Map<String, netState> connectionDict;
 	
 	/**
 	 * Standardized sleep time for spinning in the rest state.
 	 */
 	
-	private final Integer chill = new Integer(5);
+	private final Integer chill = new Integer(0);
+	
 
 	public String getLeader(){
 		return this.leader;
@@ -105,7 +119,7 @@ public class AsyncElection implements Runnable{
 			noServers = 1;
 		} else {
 			// TODO CHANGE TO LOG10
-			noServers = (network.totalRounds/3);
+			noServers = (int) Math.ceil(Math.log10(network.totalRounds));
 		}
 		
 		if(noServers <= 1){
@@ -135,14 +149,14 @@ public class AsyncElection implements Runnable{
 		HashSet<String> noSet = new HashSet<String>();
 		try{
 			
-			for(HashMap.Entry<String, netState> entry: network.connectDict.entrySet()){
-				if( network.connectDict.get(entry.getKey()).equals(netState.ON) ){
+			for(HashMap.Entry<String, netState> entry: this.connectionDict.entrySet()){
+				if( this.connectionDict.get(entry.getKey()).equals(netState.ON) ){
 					
 					// If the HeartBeat is rejected, populate the noSet.
-					network.send( entry.getKey(), new String("HEARTBEAT ") + network.controllerID );
+					network.send( entry.getKey(), heartbeat );
 					String reply = network.recv(entry.getKey());
 					
-					if ( reply.equals(new String("NO")) ){
+					if ( reply.equals(no) ){
 						noSet.add(entry.getKey());
 					}
 					// If we get an ACK, that's good.
@@ -169,10 +183,10 @@ public class AsyncElection implements Runnable{
 		// commit to set itself as the leader of the network.
 		try{
 			Set<String> reply = new HashSet<String>();
-			for(HashMap.Entry<String, netState> entry: network.connectDict.entrySet()){
-				if( network.connectDict.get(entry.getKey()).equals(netState.ON) ){
+			for(HashMap.Entry<String, netState> entry: this.connectionDict.entrySet()){
+				if( this.connectionDict.get(entry.getKey()).equals(netState.ON) ){
 					
-					network.send(entry.getKey(), new String("IWON ") + this.controllerID );
+					network.send(entry.getKey(), iwon);
 					reply.add( network.recv(entry.getKey()) );
 					logger.info("Received reply for IWON from: "+entry.getKey().toString() + reply.toString());
 					
@@ -201,12 +215,12 @@ public class AsyncElection implements Runnable{
 		HashSet<String> acceptors = new HashSet<String>();
 		try{
 			
-			for(HashMap.Entry<String, netState> entry: network.connectDict.entrySet()){
-				if( network.connectDict.get(entry.getKey()).equals(netState.ON) ){
+			for(HashMap.Entry<String, netState> entry: this.connectionDict.entrySet()){
+				if( this.connectionDict.get(entry.getKey()).equals(netState.ON) ){
 					
-					network.send(entry.getKey(), new String("LEADER ") + network.controllerID );
+					network.send(entry.getKey(), leadermsg);
 					String reply = network.recv(entry.getKey());
-					if( reply.equals(new String("LEADOK")) ){
+					if( reply.equals(leadok) ){
 						acceptors.add(entry.getKey());
 					}
 				}
@@ -240,14 +254,14 @@ public class AsyncElection implements Runnable{
 		HashSet<String> noSet = new HashSet<String>();
 		try{
 			
-			for(HashMap.Entry<String, netState> entry: network.connectDict.entrySet()){
-				if( network.connectDict.get(entry.getKey()).equals(netState.ON) ){
+			for(HashMap.Entry<String, netState> entry: this.connectionDict.entrySet()){
+				if( this.connectionDict.get(entry.getKey()).equals(netState.ON) ){
 					
 					// If the leader is rejected, populate the noSet.
-					network.send(entry.getKey(), new String("SETLEAD ") + network.controllerID);
+					network.send(entry.getKey(), setlead);
 					String reply = network.recv(entry.getKey());
 					
-					if ( reply.equals(new String("NO")) ){
+					if ( reply.equals(no) ){
 						noSet.add(entry.getKey());
 					}
 					
@@ -275,14 +289,14 @@ public class AsyncElection implements Runnable{
 		HashSet<String> leaderSet = new HashSet<String>();
 		try{
 			
-			for(HashMap.Entry<String, netState> entry: network.connectDict.entrySet()){
-				if( network.connectDict.get(entry.getKey()).equals(netState.ON) ){				
+			for(HashMap.Entry<String, netState> entry: this.connectionDict.entrySet()){
+				if( this.connectionDict.get(entry.getKey()).equals(netState.ON) ){				
 					
-					network.send(entry.getKey(), new String("YOU?"));
+					network.send(entry.getKey(), you);
 					String reply = network.recv(entry.getKey());
-					if (! reply.equals(new String("NO")) ){
+					if (! reply.equals(no) ){
 						leaderSet.add(reply);
-					} else if ( reply.equals(new String("NO")) ){
+					} else if ( reply.equals(no) ){
 						logger.info("[Election] Check Leader: " + reply +" from "+entry.getKey().toString());
 						continue;
 					}
@@ -315,16 +329,19 @@ public class AsyncElection implements Runnable{
 			} else if ( leaderSet.size() > 1 ){
 				setLeader(none);
 				logger.info("[Election checkForLeader] SPLIT BRAIN!!");
-				logger.info("[Election checkForLeader] Current Leader is null");
+				logger.info("[Election checkForLeader] Current Leader is none");
 			} else if ( leaderSet.size() < 1 ){
 				setLeader(none);
-				logger.info("[Election checkForLeader] Current Leader is null "+ this.leader.toString() );
+				logger.info("[Election checkForLeader] Current Leader is none "+ this.leader.toString() );
 			}
 			
-			if( this.leader.equals(none) ){
-				this.currentState = ElectionState.ELECT;
-				return;
-			}
+			//TODO This helps you in the case of two nodes active in a set of 4,
+			// where there is no leader but the smaller node still follows the larger.
+			
+//			if( this.leader.equals(none) ){
+//				this.currentState = ElectionState.ELECT;
+//				return;
+//			}
 			
 			return;
 			
@@ -345,20 +362,17 @@ public class AsyncElection implements Runnable{
 			nodes.add(i);
 		}
 		
-		Collections.sort(nodes);
-		Collections.reverse(nodes);
-		
 		logger.info(" +++++++++ [Election Logic] Nodes participating: "+nodes.toString());
 		
 		// TODO Something weird is going on here...
 		
 		// Get the node whose CID is numerically greater.
-		Set<String> connectDictKeys =  network.connectDict.keySet();
+		Set<String> connectDictKeys =  this.connectionDict.keySet();
 		HashSet<Integer> activeCIDs = new HashSet<Integer>();
 		
 		// Convert active controller ports into a Set of their IDs.
 		for (String port: connectDictKeys) {
-			if ( network.connectDict.get(port) != null  && network.connectDict.get(port).equals(netState.ON) ) {
+			if ( this.connectionDict.get(port) != null  && this.connectionDict.get(port).equals(netState.ON) ) {
 				activeCIDs.add(network.netcontrollerIDStatic.get(port));
 			}
 		}
@@ -388,7 +402,7 @@ public class AsyncElection implements Runnable{
 			
 			for(int i=0; i < network.numberOfPulses; i++){
 				
-				network.send(maxNodePort, new String("PULSE"));
+				network.send(maxNodePort, pulse);
 				String reply = network.recv(maxNodePort);
 				
 				if ( reply.equals(ack) ){
@@ -412,13 +426,7 @@ public class AsyncElection implements Runnable{
 		// using the checkForLeader function.
 		
 		// Ensure that majority are still connected.
-		if( network.connectDict.size() < network.majority ){
-			try {
-				TimeUnit.SECONDS.sleep(this.chill);
-			} catch (InterruptedException e) {
-				logger.debug("[Election] Interrrupted in elect function!");
-				e.printStackTrace();
-			}
+		if( this.connectionDict.size() < network.majority ){
 			return;
 		}
 		
@@ -452,7 +460,7 @@ public class AsyncElection implements Runnable{
 		this.electionLogic();
 		
 		if( this.leader.equals(network.controllerID) ){
-			logger.info("[ELection] I WON THE ELECTION!");
+			logger.info("[Election] I WON THE ELECTION!");
 			this.sendIWon();
 			this.sendLeaderMsg();
 			if(this.leader.equals(network.controllerID)) {
@@ -465,11 +473,12 @@ public class AsyncElection implements Runnable{
 		}
 		
 		// End of Actual Election logic.
+		return;
 	}
 	
 	private void cases(){
 		try {
-		while(Boolean.TRUE){
+		while(! Thread.currentThread().isInterrupted()) {
 			logger.info("Current State: "+currentState.toString());
 			switch(currentState){
 				
@@ -484,10 +493,10 @@ public class AsyncElection implements Runnable{
 				case ELECT:
 					
 					// Check for new nodes to connect to, and refresh the socket connections.
-					network.checkForNewConnections();
+					this.connectionDict = network.checkForNewConnections();
 					
 					// Ensure that a majority of nodes have connected, otherwise demote state.
-					if( network.connectDict.size() < network.majority ){
+					if( this.connectionDict.size() < network.majority ){
 						this.currentState = ElectionState.CONNECT;
 						break;
 					}
@@ -502,7 +511,7 @@ public class AsyncElection implements Runnable{
 				case SPIN:
 					
 					// This is the resting state after the election.
-					network.checkForNewConnections();
+					this.connectionDict = network.checkForNewConnections();
 					
 					if( this.leader.equals(none) ){
 						this.currentState = ElectionState.ELECT;
@@ -522,7 +531,7 @@ public class AsyncElection implements Runnable{
 				case COORDINATE:
 					
 					// This is the resting state of the leader after the election.
-					network.checkForNewConnections();
+					this.connectionDict = network.checkForNewConnections();
 					
 					if( this.leader.equals(none) ){
 						this.currentState = ElectionState.ELECT;

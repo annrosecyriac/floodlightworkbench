@@ -55,12 +55,11 @@ public class ZMQNode implements NetworkInterface, Runnable {
 	public HashMap<String, Integer>     netcontrollerIDStatic  = new HashMap<String, Integer>();
 	
 	/**
-	 * Standardized sleep times for retry connections, socket timeouts,
+	 * Standardized sleep times for socket timeouts,
 	 * number of pulses to send before expiring.
 	 */
 	
-	public final Integer retryConnectionLatency   = new Integer(1000);
-	public final Integer socketTimeout 		      = new Integer(500);
+	public final Integer socketTimeout 		      = new Integer(-1);
 	public final Integer numberOfPulses		      = new Integer(1);
 	public final Integer chill				      = new Integer(5);
 	
@@ -290,9 +289,9 @@ public class ZMQNode implements NetworkInterface, Runnable {
 	@Override
 	public Map<String, netState> checkForNewConnections() {
 		// TODO Auto-generated method stub
-		this.connectSet = new HashSet<String> (this.serverList);
-		
 		expireOldConnections();
+		
+		this.connectSet = new HashSet<String> (this.serverList);
 		
 		doConnect();
 		
@@ -338,8 +337,15 @@ public class ZMQNode implements NetworkInterface, Runnable {
 		}
 		
 		//Pop out all the expired connections from socketDict.
-		for (HashMap.Entry<String, ZMQ.Socket> entry: delmark.entrySet()){
-			this.socketDict.remove(entry.getKey());
+		try{
+			for (HashMap.Entry<String, ZMQ.Socket> entry: delmark.entrySet()){
+				this.socketDict.remove(entry.getKey());
+				entry.getValue().setLinger(0);
+				entry.getValue().close();
+			}
+		} catch (Exception e) {
+			logger.info("[ZMQNode] Error in expireOldConnections, while deleting socket");
+			e.printStackTrace();
 		}
 		
 		logger.info("Expired old connections.");
@@ -390,11 +396,6 @@ public class ZMQNode implements NetworkInterface, Runnable {
 			try {
 				logger.info("[Node] BlockUntil: Trying to connect...");
 				this.connectClients();
-				Thread.sleep(this.retryConnectionLatency.intValue());
-			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				logger.info("[Node] BlockUntil connected was interrrupted!");
-				e.printStackTrace();
 			} catch (Exception e){
 				logger.info("[Node] BlockUntil errored out: "+e.toString());
 				e.printStackTrace();
