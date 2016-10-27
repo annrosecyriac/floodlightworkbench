@@ -36,7 +36,7 @@ public class ZMQServer implements Runnable{
 	private final String dc       = new String ("DONTCARE");
 	
 	
-	public final Integer socketTimeout = new Integer(-1);
+	public final Integer socketTimeout = new Integer(500);
 	
 	/**
 	 * 

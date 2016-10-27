@@ -67,7 +67,7 @@ public class AsyncElection implements Runnable{
 	 * Standardized sleep time for spinning in the rest state.
 	 */
 	
-	private final Integer chill = new Integer(0);
+	private final Integer chill = new Integer(5);
 	
 
 	public String getLeader(){

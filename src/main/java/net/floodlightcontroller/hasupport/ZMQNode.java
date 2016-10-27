@@ -60,7 +60,7 @@ public class ZMQNode implements NetworkInterface, Runnable {
 	 * number of pulses to send before expiring.
 	 */
 	
-	public final Integer socketTimeout 		      = new Integer(-1);
+	public final Integer socketTimeout 		      = new Integer(500);
 	public final Integer numberOfPulses		      = new Integer(1);
 	public final Integer chill				      = new Integer(5);
 	
