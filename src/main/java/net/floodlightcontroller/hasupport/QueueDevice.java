@@ -83,7 +83,6 @@ public class QueueDevice implements Runnable{
 	public void run() {
 		// TODO Auto-generated method stub
 		startQueue();
-		
 	}
 
 }

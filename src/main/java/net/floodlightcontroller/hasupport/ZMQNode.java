@@ -60,6 +60,10 @@ public class ZMQNode implements NetworkInterface, Runnable {
 	 * number of pulses to send before expiring.
 	 */
 	
+	// Decide the socket timeout value based on how fast you think the leader should
+	// respond and also how far apart the actual nodes are placed. If you are trying
+	// to communicate with servers far away, then anything upto 10s would be a good value.
+	
 	public final Integer socketTimeout 		      = new Integer(500);
 	public final Integer numberOfPulses		      = new Integer(1);
 	public final Integer chill				      = new Integer(5);

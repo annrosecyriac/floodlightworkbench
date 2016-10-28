@@ -32,6 +32,15 @@ public class AsyncElection implements Runnable{
 	ArrayList<Thread> serverThreads = new ArrayList<Thread>();
 	private final String controllerID;
 	
+	public AsyncElection(String sp, String cid) {
+		this.serverPort    = sp;
+		this.controllerID = cid;
+		this.setlead       = new String("SETLEAD "   + this.controllerID);
+		this.leadermsg     = new String("LEADER "    + this.controllerID);
+		this.iwon 		   = new String("IWON "      + this.controllerID);
+		this.heartbeat     = new String("HEARTBEAT " + this.controllerID);
+	}
+	
 	public AsyncElection(String serverPort, String clientPort, String controllerID){
 		this.network       = new ZMQNode(serverPort,clientPort,controllerID);
 		this.serverPort    = serverPort;

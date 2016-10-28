@@ -35,6 +35,9 @@ public class ZMQServer implements Runnable{
 	private final String lead     = new String ("LEADOK");
 	private final String dc       = new String ("DONTCARE");
 	
+	// Decide the socket timeout value based on how fast you think the leader should
+	// respond and also how far apart the actual nodes are placed. If you are trying
+	// to communicate with servers far away, then anything upto 10s would be a good value.
 	
 	public final Integer socketTimeout = new Integer(500);
 	
@@ -100,7 +103,7 @@ public class ZMQServer implements Runnable{
 		String cmp = mssg.substring(0,1);
 		
 		logger.info("[ZMQServer] "+cmp.toString());
-		
+
 		if(cmp.equals(iwon)) {
 			
 			logger.info("[ZMQServer] Received IWon message: " + mssg.toString());
