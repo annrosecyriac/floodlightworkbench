@@ -22,7 +22,7 @@ public class ZMQServerTest {
 	static Thread ael;
 	static String mockServerPort = new String("127.0.0.1:4242");
 	static String mockClientPort = new String("127.0.0.1:5252");
-	static String nodeID		  = new String("2");
+	static String nodeID		  = new String("1");
 
 	@BeforeClass
 	public static void setUp() throws Exception {
@@ -40,7 +40,94 @@ public class ZMQServerTest {
 		servThread.start();
 	}
 	
-public static void startQueue() {
+	@Test
+	public void testSetTempLeader() {
+		tc.send("IWON 2");
+		tc.send("LEADER 2");
+		
+		assertEquals(ae.gettempLeader(),"2");
+		ae.setTempLeader("none");
+	}
+	
+	@Test
+	public void testSetLeader() {
+		tc.send("IWON 2");
+		tc.send("LEADER 2");
+		tc.send("SETLEAD 2");
+		
+		
+		assertEquals(ae.getLeader(),"2");
+		ae.setTempLeader("none");
+		ae.setLeader("none");
+	}
+	
+	@Test
+	public void testZMQServer() {
+		//no need for sockets
+		String recv = new String();
+		recv = tc.send("PULSE");
+		assertEquals(recv,"ACK");
+	}
+	
+	@Test
+	public void testRun() {
+		String recv = tc.send("LOL 3");
+		assertEquals(recv,"DONTCARE");
+	}
+	
+	@Test
+	public void testRandom() {
+		String recv = tc.send("BK");
+		assertEquals(recv,"DONTCARE");
+	}
+	
+	@Test
+	public void testSetLeaderIlleagal() {
+		
+		tc.send("IWON 2");
+		tc.send("SETLEAD 2");
+		tc.send("LEADER 2");
+		
+		assertEquals(ae.getLeader(),"2");
+		ae.setTempLeader("none");
+		ae.setLeader("none");
+	}
+	
+	@AfterClass
+	public static void tearDown() throws Exception {
+		try {
+			servThread.interrupt();
+			qD.interrupt();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	public static void setSysPath(){
+		System.setProperty("java.library.path", "lib/");
+		System.setProperty("java.class.path", "lib/zmq.jar");
+		Field sysPathsField;
+		try {
+			sysPathsField = ClassLoader.class.getDeclaredField("sys_paths");
+			sysPathsField.setAccessible(true);
+		    sysPathsField.set(null, null);
+		} catch (NoSuchFieldException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		} catch (SecurityException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		} catch (IllegalArgumentException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IllegalAccessException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return;
+	}
+	
+	public static void startQueue() {
 		
 		try{
 			/**
@@ -86,54 +173,6 @@ public static void startQueue() {
 			e.printStackTrace();
 		}
 		
-	}
-	
-	@Test
-	public void testZMQServer() {
-		//no need for sockets
-		String recv = new String();
-		recv = tc.send("PULSE");
-		assertEquals(recv,"ACK");
-	}
-	
-	@Test
-	public void testRun() {
-		String recv = tc.send("LOL 2");
-		assertEquals(recv,"NO");
-	}
-	
-	@AfterClass
-	public static void tearDown() throws Exception {
-		try {
-			servThread.interrupt();
-			qD.interrupt();
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-	}
-
-	public static void setSysPath(){
-		System.setProperty("java.library.path", "lib/");
-		System.setProperty("java.class.path", "lib/zmq.jar");
-		Field sysPathsField;
-		try {
-			sysPathsField = ClassLoader.class.getDeclaredField("sys_paths");
-			sysPathsField.setAccessible(true);
-		    sysPathsField.set(null, null);
-		} catch (NoSuchFieldException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		} catch (SecurityException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		} catch (IllegalArgumentException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IllegalAccessException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		return;
 	}
 
 }

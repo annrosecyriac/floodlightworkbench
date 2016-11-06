@@ -6,7 +6,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import net.floodlightcontroller.core.IFloodlightProviderService;
@@ -14,7 +13,6 @@ import net.floodlightcontroller.core.module.FloodlightModuleContext;
 import net.floodlightcontroller.core.module.FloodlightModuleException;
 import net.floodlightcontroller.core.module.IFloodlightModule;
 import net.floodlightcontroller.core.module.IFloodlightService;
-import net.floodlightcontroller.core.util.SingletonTask;
 import net.floodlightcontroller.threadpool.IThreadPoolService;
 
 import org.slf4j.Logger;
@@ -29,7 +27,6 @@ public class HAController implements IFloodlightModule {
 
 	private static Logger logger = LoggerFactory.getLogger(HAController.class);
 	protected static IThreadPoolService threadPoolService;
-	protected static SingletonTask electionTask;
 	private static Map<String, String> config = new HashMap<String, String>();
 	private final String none = new String("none");
 
@@ -88,21 +85,18 @@ public class HAController implements IFloodlightModule {
 		// TODO Auto-generated method stub
 		
 		//Read config file and start the Election class with the right params.
-		
-		ScheduledExecutorService ses = threadPoolService.getScheduledExecutor();
 		AsyncElection ael = new AsyncElection( config.get("serverPort") ,config.get("clientPort"), config.get("nodeid") );
-		electionTask = new SingletonTask(ses, ael);		
 		
 		try{
-			electionTask.reschedule(1, TimeUnit.NANOSECONDS);
-			long start = System.nanoTime();
-			while(! Thread.currentThread().isInterrupted()){
-				if(! ael.getLeader().toString().equals(none) ) {
-					Long duration = (long) ((System.nanoTime() - start) / 1000000.000) ;
-					logger.info("[HAController MEASURE] Got Leader: "+ael.getLeader().toString() + "Elapsed :"+ duration.toString());
-					break;
-				}
-			}
+			threadPoolService.getScheduledExecutor().schedule(ael, 1, TimeUnit.NANOSECONDS);
+//			long start = System.nanoTime();
+//			while(! Thread.currentThread().isInterrupted()){
+//				if(! ael.getLeader().toString().equals(none) ) {
+//					Long duration = (long) ((System.nanoTime() - start) / 1000000.000) ;
+//					logger.info("[HAController MEASURE] Got Leader: "+ael.getLeader().toString() + "Elapsed :"+ duration.toString());
+//					break;
+//				}
+//			}
 			
 		} catch (Exception e){
 			logger.info("[Election] Was interrrupted! "+e.toString());

@@ -1,6 +1,5 @@
 package net.floodlightcontroller.hasupport;
 
-import org.json.JSONObject;
 
 /**
  * Maintain a queue to filter out duplicates before pulling 
@@ -10,11 +9,11 @@ import org.json.JSONObject;
  */
 public interface IFilterQueue {
 	
-	public boolean enqueueForward(JSONObject value);
+	public boolean enqueueForward(String value);
 	
 	public boolean dequeueForward();
 	
-	public boolean enqueueReverse(JSONObject value);
+	public boolean enqueueReverse(String value);
 	
 	public boolean dequeueReverse();
 	

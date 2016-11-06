@@ -4,69 +4,88 @@ package net.floodlightcontroller.hasupport.linkdiscovery;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import org.json.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import net.floodlightcontroller.core.IFloodlightProviderService;
 import net.floodlightcontroller.core.module.FloodlightModuleContext;
 import net.floodlightcontroller.core.module.FloodlightModuleException;
 import net.floodlightcontroller.core.module.IFloodlightModule;
 import net.floodlightcontroller.core.module.IFloodlightService;
-import net.floodlightcontroller.core.util.SingletonTask;
 import net.floodlightcontroller.hasupport.IHAWorker;
 import net.floodlightcontroller.linkdiscovery.ILinkDiscoveryListener;
 import net.floodlightcontroller.linkdiscovery.ILinkDiscoveryService;
 import net.floodlightcontroller.threadpool.IThreadPoolService;
 
-
-public class LDHAWorker implements IHAWorker, ILDHAWorkerService, IFloodlightModule, ILinkDiscoveryListener {
+/**
+ * This is the Worker class used to publish, subscribe updates to
+ * and from the controller respectively
+ * @author Om Kale
+ *
+ */
+public class LDHAWorker implements IHAWorker, IFloodlightModule, ILinkDiscoveryListener {
 	protected static Logger logger = LoggerFactory.getLogger(LDHAWorker.class);
 	protected static ILinkDiscoveryService linkserv;
 	protected static IFloodlightProviderService floodlightProvider;
 	
-	protected SingletonTask dummyTask;
+	protected Runnable dummyTask;
 	List<String> synLDUList = Collections.synchronizedList(new ArrayList<String>());
 	protected static IThreadPoolService threadPoolService;
 	private static final LDFilterQueue myLDFilterQueue = new LDFilterQueue(); 
 	
 	public LDHAWorker(){};
 	
+	/**
+	 * This function is used to assemble the LDupdates into
+	 * a JSON string using JSON Jackson API
+	 * @return JSON string
+	 */
+	
 	@Override
-	public JSONObject getJSONObject(String controllerId){
-		return new JSONObject();
-	}
-
-	@Override
-	public JSONObject assembleUpdate() {
+	public List<String> assembleUpdate() {
 		// TODO Auto-generated method stub
-		JSONObject myJson = new JSONObject();
-		Integer i=0;
+		List<String> jsonInString = new LinkedList<String>();
+		LDHAUtils parser = new LDHAUtils();
 		
-		for(String update : synLDUList){
-			String key = "field" + i.toString();
-			myJson.append(key, update);
-			i=i+1;
+		String preprocess = new String (synLDUList.toString());
+		// Flatten the updates and strip off leading [
+		
+		if(preprocess.startsWith("[")){
+			preprocess = preprocess.substring(1, preprocess.length());
 		}
 		
-		logger.info("MyJson: "+myJson.toString());
-		return myJson;
+		String chunk = new String(preprocess.toString());
+		
+		if(! preprocess.startsWith("]") ) {
+			jsonInString = parser.parseChunk(chunk);
+		}
+
+		logger.info("\n[Assemble Update] JSON String: {}", new Object[] {jsonInString});
+		return jsonInString;
 	}
 
-
+    /**
+     * This function is called in order to start pushing updates 
+     * into the syncDB
+     */
 	@Override
 	public boolean publishHook() {
 		// TODO Auto-generated method stub
 		try{
-			logger.info("Printing Update {}: ",new Object[]{synLDUList});
-			myLDFilterQueue.enqueueForward(assembleUpdate());
-			synLDUList.clear();
-			TimeUnit.SECONDS.sleep(5);
-			myLDFilterQueue.dequeueForward();
+			synchronized (synLDUList){
+				logger.info("Printing Updates {}: ",new Object[]{synLDUList});
+				List<String> updates = assembleUpdate();
+				for(String update : updates){
+					myLDFilterQueue.enqueueForward(update);
+				}
+				synLDUList.clear();
+				myLDFilterQueue.dequeueForward();
+			}
 			return true;
 		} catch (Exception e){
 			logger.info("[LDHAWorker] An exception occoured!");
@@ -80,31 +99,12 @@ public class LDHAWorker implements IHAWorker, ILDHAWorkerService, IFloodlightMod
 		// TODO Auto-generated method stub
 		return false;
 	}
-	
-	/**
-	 * This function is called by external users to getUpdates 
-	 */
-	@Override
-	public JSONObject getUpdates() {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-    /**
-     * This function is called by external users to push JSON objects 
-     * into 
-     */
-	@Override
-	public void pushUpdates(JSONObject update) {
-		// TODO Auto-generated method stub
-		
-		
-	}
 
 	@Override
 	public void linkDiscoveryUpdate(List<LDUpdate> updateList) {
 		// TODO Auto-generated method stub
 		synchronized(synLDUList){
+			//synLDUList.clear();
 			for (LDUpdate update: updateList){	
 				synLDUList.add(update.toString());
 			}
@@ -138,6 +138,7 @@ public class LDHAWorker implements IHAWorker, ILDHAWorkerService, IFloodlightMod
 		// TODO Auto-generated method stub
 		linkserv = context.getServiceImpl(ILinkDiscoveryService.class);
 		threadPoolService = context.getServiceImpl(IThreadPoolService.class);
+		logger.info("LDHAWorker is init...");
 	}
 	
 	@Override
@@ -145,24 +146,25 @@ public class LDHAWorker implements IHAWorker, ILDHAWorkerService, IFloodlightMod
 		// TODO Auto-generated method stub
 		logger = LoggerFactory.getLogger(LDHAWorker.class);
 		linkserv.addListener(this);
-		ScheduledExecutorService ses = threadPoolService.getScheduledExecutor();
 		
 		logger.info("LDHAWorker is starting...");
 
 		// To be started by the first switch connection
-		dummyTask = new SingletonTask(ses, new Runnable() {
+		dummyTask = new Runnable() {
 			@Override
 			public void run() {
 				try {
 					publishHook();
+					subscribeHook(new String("C1"));
 				} catch (Exception e) {
 					logger.info("Exception in LDWorker.", e);
-				} finally {
-					dummyTask.reschedule(10, TimeUnit.SECONDS);	
 				}
 			}
-		});
-		dummyTask.reschedule(10, TimeUnit.SECONDS);
+		};
+			
+		threadPoolService.getScheduledExecutor().scheduleAtFixedRate(dummyTask, 10, 10, TimeUnit.SECONDS);
+		
+		return;
 	}
 	
 }

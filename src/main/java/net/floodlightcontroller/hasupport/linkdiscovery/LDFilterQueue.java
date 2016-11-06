@@ -1,65 +1,70 @@
 package net.floodlightcontroller.hasupport.linkdiscovery;
 
-
-import java.math.BigInteger;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 
-import org.json.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import net.floodlightcontroller.hasupport.IFilterQueue;
+
+/**
+ * A Queue to store LDupdates
+ * @author Om Kale
+ */
 
 public class LDFilterQueue implements IFilterQueue {
 	
 	protected static Logger logger = LoggerFactory.getLogger(LDFilterQueue.class);
 	private static final LDSyncAdapter syncAdapter = new LDSyncAdapter();
 	
-	LinkedBlockingQueue<JSONObject> filterQueue = new LinkedBlockingQueue<>();
-	MessageDigest mdEnc;
-	HashMap<String, JSONObject> myMap = new HashMap<String, JSONObject>();
+	LinkedBlockingQueue<String> filterQueue = new LinkedBlockingQueue<>();
+	HashMap<String, String> myMap = new HashMap<String, String>();
+	private String newMD5 = new String();
+    
 	
-
+	
+	/**
+	 * This function hashes the LDupdates received in form of json string 
+	 * using md5 hashing and store them in the filter queue and in a map 
+	 * if not already present
+	 */	 
+	
 	@Override
-	public boolean enqueueForward(JSONObject value) {
-		// TODO Auto-generated method stub
-		try {
-			logger.info("[FilterQ] Has been called.");
-			this.mdEnc = MessageDigest.getInstance("MD5");
-			this.mdEnc.digest(value.toString().getBytes());
-			String md5 = new BigInteger(1, this.mdEnc.digest()).toString(16);
-			logger.info("[FilterQ] The MD5: {} The Value {}", new Object [] {md5,value});
-			if( (!myMap.containsKey(md5)) && (!value.equals(null)) ){
+	public boolean enqueueForward(String value) {
+		try {		
+			LDHAUtils myMD5 = new LDHAUtils();
+			newMD5 = myMD5.calculateMD5Hash(value);
+			logger.info("[FilterQ] The MD5: {} The Value {}", new Object [] {newMD5,value});
+			if( (!myMap.containsKey(newMD5)) && (!value.equals(null)) ){
 				filterQueue.offer(value);
-				myMap.put(md5, value);
+				myMap.put(newMD5, value);
 			}
 			return true;
-		} catch (NoSuchAlgorithmException nae) {
-			// TODO Auto-generated catch block
-			logger.info("[FilterQ] No such algorithm MD5!");
-			nae.printStackTrace();
-			return false;
-		} catch (Exception e){
+	
+		} 
+		catch (Exception e){
 			logger.info("[FilterQ] Exception: enqueueFwd!");
 			e.printStackTrace();
 			return false;
 		}
 	}
 
+	/**
+	 * This function pushes the LDupdates from the filter 
+	 * queue into the syncAdapter
+	 */
+	
+	
 	@Override
 	public boolean dequeueForward() {
 		// TODO Auto-generated method stub
 		try {
-			ArrayList<JSONObject> LDupds = new ArrayList<JSONObject>();
-			if( !filterQueue.isEmpty() ){
+			ArrayList<String> LDupds = new ArrayList<String>();
+			if(! filterQueue.isEmpty() ) {
 				filterQueue.drainTo(LDupds);
-				filterQueue.clear();
 			}
-			if( !LDupds.isEmpty() ){
+			if(! LDupds.isEmpty() ) {
 				logger.info("[FilterQ] The update after drain: {} ", new Object [] {LDupds.toString()});
 				syncAdapter.packJSON(LDupds);
 				return true;
@@ -76,7 +81,7 @@ public class LDFilterQueue implements IFilterQueue {
 	}
 
 	@Override
-	public boolean enqueueReverse(JSONObject value) {
+	public boolean enqueueReverse(String value) {
 		// TODO Auto-generated method stub
 		return false;
 	}
@@ -86,6 +91,7 @@ public class LDFilterQueue implements IFilterQueue {
 		// TODO Auto-generated method stub
 		return false;
 	}
+
 	
 
 }
