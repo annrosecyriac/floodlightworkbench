@@ -14,6 +14,8 @@ public interface IFilterQueue {
 	
 	public boolean dequeueForward();
 	
+	public void subscribe(String controllerID);
+	
 	public boolean enqueueReverse(String value);
 	
 	public List<String> dequeueReverse();

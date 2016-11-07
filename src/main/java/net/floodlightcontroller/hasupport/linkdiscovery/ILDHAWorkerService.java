@@ -4,10 +4,9 @@ import net.floodlightcontroller.core.module.IFloodlightService;
 
 public interface ILDHAWorkerService extends IFloodlightService {
 	
+	public boolean publishHook();
 	
-	public String getUpdates();
-	
-	public void pushUpdates(String update);
+	public boolean subscribeHook(String controllerID);
 	
 	
 

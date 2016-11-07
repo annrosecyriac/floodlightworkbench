@@ -82,6 +82,7 @@ public class LDFilterQueue implements IFilterQueue {
 		return false;
 	}
 	
+	@Override
 	public void subscribe(String controllerID) {
 		syncAdapter.unpackJSON(controllerID);
 		return;

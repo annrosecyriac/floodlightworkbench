@@ -13,6 +13,7 @@ import net.floodlightcontroller.core.module.FloodlightModuleContext;
 import net.floodlightcontroller.core.module.FloodlightModuleException;
 import net.floodlightcontroller.core.module.IFloodlightModule;
 import net.floodlightcontroller.core.module.IFloodlightService;
+import net.floodlightcontroller.hasupport.linkdiscovery.ILDHAWorkerService;
 import net.floodlightcontroller.threadpool.IThreadPoolService;
 
 import org.slf4j.Logger;
@@ -27,8 +28,8 @@ public class HAController implements IFloodlightModule {
 
 	private static Logger logger = LoggerFactory.getLogger(HAController.class);
 	protected static IThreadPoolService threadPoolService;
+	protected static ILDHAWorkerService ldHAService;
 	private static Map<String, String> config = new HashMap<String, String>();
-	private final String none = new String("none");
 
 	
 	public static void setSysPath(){
@@ -66,6 +67,7 @@ public class HAController implements IFloodlightModule {
 		// TODO Auto-generated method stub
     	Collection<Class<? extends IFloodlightService>> l = new ArrayList<Class<? extends IFloodlightService>>();
 		l.add(IThreadPoolService.class);
+		l.add(ILDHAWorkerService.class);
 		l.add(IFloodlightProviderService.class);
 		return l;
 	}
@@ -75,6 +77,7 @@ public class HAController implements IFloodlightModule {
 		// TODO Auto-generated method stub
 		logger = LoggerFactory.getLogger(HAController.class);
 		threadPoolService = context.getServiceImpl(IThreadPoolService.class);
+		ldHAService = context.getServiceImpl(ILDHAWorkerService.class);
 		setSysPath();
 		config = context.getConfigParams(this);
 		logger.info("Configuration parameters: {} {} ", new Object[] {config.toString(), config.get("nodeid")});
@@ -88,15 +91,9 @@ public class HAController implements IFloodlightModule {
 		AsyncElection ael = new AsyncElection( config.get("serverPort") ,config.get("clientPort"), config.get("nodeid") );
 		
 		try{
-			threadPoolService.getScheduledExecutor().schedule(ael, 1, TimeUnit.NANOSECONDS);
-//			long start = System.nanoTime();
-//			while(! Thread.currentThread().isInterrupted()){
-//				if(! ael.getLeader().toString().equals(none) ) {
-//					Long duration = (long) ((System.nanoTime() - start) / 1000000.000) ;
-//					logger.info("[HAController MEASURE] Got Leader: "+ael.getLeader().toString() + "Elapsed :"+ duration.toString());
-//					break;
-//				}
-//			}
+			
+			threadPoolService.getScheduledExecutor().schedule(ael, 5, TimeUnit.NANOSECONDS);
+			threadPoolService.getScheduledExecutor().schedule(new ControllerLogic(ael,config.get("nodeid"),ldHAService), 1, TimeUnit.NANOSECONDS);
 			
 		} catch (Exception e){
 			logger.info("[Election] Was interrrupted! "+e.toString());

@@ -4,6 +4,7 @@ package net.floodlightcontroller.hasupport.linkdiscovery;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -28,7 +29,7 @@ import net.floodlightcontroller.threadpool.IThreadPoolService;
  * @author Om Kale
  *
  */
-public class LDHAWorker implements IHAWorker, IFloodlightModule, ILinkDiscoveryListener {
+public class LDHAWorker implements IHAWorker, IFloodlightModule, ILinkDiscoveryListener, ILDHAWorkerService {
 	protected static Logger logger = LoggerFactory.getLogger(LDHAWorker.class);
 	protected static ILinkDiscoveryService linkserv;
 	protected static IFloodlightProviderService floodlightProvider;
@@ -127,13 +128,19 @@ public class LDHAWorker implements IHAWorker, IFloodlightModule, ILinkDiscoveryL
 	@Override
 	public Collection<Class<? extends IFloodlightService>> getModuleServices() {
 		// TODO Auto-generated method stub
-		return null;
+		Collection<Class<? extends IFloodlightService>> l =
+				new ArrayList<Class<? extends IFloodlightService>>();
+		l.add(ILDHAWorkerService.class);
+		return l;
 	}
 	
 	@Override
 	public Map<Class<? extends IFloodlightService>, IFloodlightService> getServiceImpls() {
-		// TODO Auto-generated method stub
-		return null;
+		Map<Class<? extends IFloodlightService>, IFloodlightService> m =
+				new HashMap<Class<? extends IFloodlightService>, IFloodlightService>();
+		// We are the class that implements the service
+		m.put(ILDHAWorkerService.class, this);
+		return m;
 	}
 	
 	@Override
@@ -161,19 +168,19 @@ public class LDHAWorker implements IHAWorker, IFloodlightModule, ILinkDiscoveryL
 		logger.info("LDHAWorker is starting...");
 
 		// To be started by the first switch connection
-		dummyTask = new Runnable() {
-			@Override
-			public void run() {
-				try {
-					publishHook();
-					subscribeHook(new String("C1"));
-				} catch (Exception e) {
-					logger.info("Exception in LDWorker.", e);
-				}
-			}
-		};
-			
-		threadPoolService.getScheduledExecutor().scheduleAtFixedRate(dummyTask, 5, 5, TimeUnit.SECONDS);
+//		dummyTask = new Runnable() {
+//			@Override
+//			public void run() {
+//				try {
+//					publishHook();
+//					subscribeHook(new String("C1"));
+//				} catch (Exception e) {
+//					logger.info("Exception in LDWorker.", e);
+//				}
+//			}
+//		};
+//			
+//		threadPoolService.getScheduledExecutor().scheduleAtFixedRate(dummyTask, 5, 5, TimeUnit.SECONDS);
 		
 		return;
 	}
