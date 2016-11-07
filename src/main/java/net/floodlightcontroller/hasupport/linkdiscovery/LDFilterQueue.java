@@ -2,6 +2,7 @@ package net.floodlightcontroller.hasupport.linkdiscovery;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import org.slf4j.Logger;
@@ -18,10 +19,10 @@ public class LDFilterQueue implements IFilterQueue {
 	protected static Logger logger = LoggerFactory.getLogger(LDFilterQueue.class);
 	private static final LDSyncAdapter syncAdapter = new LDSyncAdapter();
 	
-	LinkedBlockingQueue<String> filterQueue = new LinkedBlockingQueue<>();
-	HashMap<String, String> myMap = new HashMap<String, String>();
-	private String newMD5 = new String();
-    
+	public static LinkedBlockingQueue<String> filterQueue = new LinkedBlockingQueue<>();
+	public static HashMap<String, String> myMap = new HashMap<String, String>();
+	
+	public static LinkedBlockingQueue<String> reverseFilterQueue = new LinkedBlockingQueue<>();
 	
 	
 	/**
@@ -32,7 +33,8 @@ public class LDFilterQueue implements IFilterQueue {
 	
 	@Override
 	public boolean enqueueForward(String value) {
-		try {		
+		try {
+			String newMD5 = new String();
 			LDHAUtils myMD5 = new LDHAUtils();
 			newMD5 = myMD5.calculateMD5Hash(value);
 			logger.info("[FilterQ] The MD5: {} The Value {}", new Object [] {newMD5,value});
@@ -79,19 +81,52 @@ public class LDFilterQueue implements IFilterQueue {
 		
 		return false;
 	}
+	
+	public void subscribe(String controllerID) {
+		syncAdapter.unpackJSON(controllerID);
+		return;
+	}
 
 	@Override
 	public boolean enqueueReverse(String value) {
 		// TODO Auto-generated method stub
-		return false;
+		try {
+			logger.info("[ReverseFilterQ] The Value {}", new Object [] {value});
+			if( (!value.equals(null)) ){
+				reverseFilterQueue.offer(value);
+			}
+			return true;
+		} 
+		catch (Exception e){
+			logger.info("[ReverseFilterQ] Exception: enqueueFwd!");
+			e.printStackTrace();
+			return true;
+		}
+		
 	}
 
 	@Override
-	public boolean dequeueReverse() {
+	public List<String> dequeueReverse() {
 		// TODO Auto-generated method stub
-		return false;
+		ArrayList<String> LDupds = new ArrayList<String>();
+		try {
+			if(! reverseFilterQueue.isEmpty() ) {
+				reverseFilterQueue.drainTo(LDupds);
+			}
+			
+			if(! LDupds.isEmpty() ) {
+				logger.info("[ReverseFilterQ] The update after drain: {} ", new Object [] {LDupds.toString()});
+				return LDupds;
+			}
+			return LDupds;
+			
+		} catch (Exception e){
+			logger.info("[ReverseFilterQ] Dequeue Forward failed!");
+			e.printStackTrace();
+		}
+		
+		return LDupds;
+		
 	}
-
-	
 
 }

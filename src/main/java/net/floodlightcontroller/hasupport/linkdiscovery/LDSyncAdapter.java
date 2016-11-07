@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -35,13 +36,10 @@ public class LDSyncAdapter implements ISyncAdapter, IFloodlightModule, IStoreLis
 	protected static IStoreClient<String, String> storeLD;
 	protected static IFloodlightProviderService floodlightProvider;
 	
-	private String controllerId;
+	private static String controllerId;
 	private final String none = new String("none");
 	private final String[] highfields = new String[]{"operation",  "latency", "timestamp"};
-	
-	public LDSyncAdapter(){
-		this.controllerId  = new String("C1");
-	}
+	private static final LDFilterQueue myLDFilterQueue = new LDFilterQueue();
 	
 	@Override
 	public void packJSON(List<String> newUpdates) {
@@ -154,6 +152,38 @@ public class LDSyncAdapter implements ISyncAdapter, IFloodlightModule, IStoreLis
 		}
 		
 	}
+	
+	public void unpackJSON(String controllerID) {
+		// 1. Get all cmd5 hashes for the particular controller ID.
+		try {
+			String collatedcmd5 = LDSyncAdapter.storeLD.getValue(controllerID, none);
+			
+			if (! collatedcmd5.equals(none) ) {
+				
+				if (collatedcmd5.endsWith(", ")) {
+					collatedcmd5 = collatedcmd5.substring(0, collatedcmd5.length()-2);
+				}
+				
+				logger.info("[Unpack] Collated CMD5: {}", new Object[] {collatedcmd5.toString()});
+				
+				String[] cmd5hashes = collatedcmd5.split(", ");
+				for (String cmd5: cmd5hashes) {
+					String update = LDSyncAdapter.storeLD.getValue(cmd5, none);
+					if(! update.equals(none) ) {
+						logger.info("[Unpack]: {}", new Object [] {update.toString()});
+						myLDFilterQueue.enqueueReverse(update);
+					}
+				}
+			}
+			
+			return;
+			
+		} catch (SyncException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}	
+
+	}
 
 	@Override
 	public Collection<Class<? extends IFloodlightService>> getModuleServices() {
@@ -184,7 +214,7 @@ public class LDSyncAdapter implements ISyncAdapter, IFloodlightModule, IStoreLis
 		logger = LoggerFactory.getLogger(LDSyncAdapter.class);
 		floodlightProvider = context.getServiceImpl(IFloodlightProviderService.class);
 		syncService = context.getServiceImpl(ISyncService.class);
-		controllerId = floodlightProvider.getControllerId();
+		controllerId = new String("C" + floodlightProvider.getControllerId());
         logger.info("Node Id: {}", new Object[] {controllerId});
 		
 	}

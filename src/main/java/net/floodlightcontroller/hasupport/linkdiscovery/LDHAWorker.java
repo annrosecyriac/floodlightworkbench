@@ -97,7 +97,18 @@ public class LDHAWorker implements IHAWorker, IFloodlightModule, ILinkDiscoveryL
 	@Override
 	public boolean subscribeHook(String controllerID) {
 		// TODO Auto-generated method stub
-		return false;
+		try {
+			List<String> updates = new ArrayList<String>();
+			myLDFilterQueue.subscribe(controllerID);
+			updates = myLDFilterQueue.dequeueReverse();
+			logger.info("[Subscribe] ==================== THE UPDATES: ===================");
+			for (String update: updates) {
+				logger.info("Update: {}", new Object[]{update.toString()});
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return true;
 	}
 
 	@Override
@@ -162,7 +173,7 @@ public class LDHAWorker implements IHAWorker, IFloodlightModule, ILinkDiscoveryL
 			}
 		};
 			
-		threadPoolService.getScheduledExecutor().scheduleAtFixedRate(dummyTask, 10, 10, TimeUnit.SECONDS);
+		threadPoolService.getScheduledExecutor().scheduleAtFixedRate(dummyTask, 5, 5, TimeUnit.SECONDS);
 		
 		return;
 	}

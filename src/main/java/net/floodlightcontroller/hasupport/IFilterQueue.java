@@ -1,5 +1,6 @@
 package net.floodlightcontroller.hasupport;
 
+import java.util.List;
 
 /**
  * Maintain a queue to filter out duplicates before pulling 
@@ -15,7 +16,7 @@ public interface IFilterQueue {
 	
 	public boolean enqueueReverse(String value);
 	
-	public boolean dequeueReverse();
+	public List<String> dequeueReverse();
 	
 
 }
