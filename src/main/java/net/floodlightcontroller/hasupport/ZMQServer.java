@@ -159,6 +159,20 @@ public class ZMQServer implements Runnable{
 				
 				//logger.info("[ZMQServer] Received PULSE message: " + mssg.toString());
 				return ack;
+			
+			} else if (cmp == 'B') {
+				
+				logger.info("[ZMQServer] Received PUBLISH message: " + mssg.toString());
+				AsyncElection.haworker.getService("LDHAWorker").publishHook();
+				return ack;
+				
+			} else if (cmp == 'K') {
+				
+				logger.info("[ZMQServer] Received SUBSCRIBE message: " + mssg.toString());
+				String cr = new String ("C" + String.valueOf(mssg.charAt(12)) ) ;
+				AsyncElection.haworker.getService("LDHAWorker").subscribeHook(cr);
+				return ack;
+				
 			}
 		} catch (StringIndexOutOfBoundsException si) {
 			

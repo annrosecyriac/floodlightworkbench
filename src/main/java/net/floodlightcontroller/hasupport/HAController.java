@@ -13,7 +13,6 @@ import net.floodlightcontroller.core.module.FloodlightModuleContext;
 import net.floodlightcontroller.core.module.FloodlightModuleException;
 import net.floodlightcontroller.core.module.IFloodlightModule;
 import net.floodlightcontroller.core.module.IFloodlightService;
-import net.floodlightcontroller.hasupport.linkdiscovery.ILDHAWorkerService;
 import net.floodlightcontroller.threadpool.IThreadPoolService;
 
 import org.slf4j.Logger;
@@ -28,7 +27,7 @@ public class HAController implements IFloodlightModule {
 
 	private static Logger logger = LoggerFactory.getLogger(HAController.class);
 	protected static IThreadPoolService threadPoolService;
-	protected static ILDHAWorkerService ldHAService;
+	protected static IHAWorkerService haworker;
 	private static Map<String, String> config = new HashMap<String, String>();
 
 	
@@ -67,7 +66,7 @@ public class HAController implements IFloodlightModule {
 		// TODO Auto-generated method stub
     	Collection<Class<? extends IFloodlightService>> l = new ArrayList<Class<? extends IFloodlightService>>();
 		l.add(IThreadPoolService.class);
-		l.add(ILDHAWorkerService.class);
+		l.add(IHAWorkerService.class);
 		l.add(IFloodlightProviderService.class);
 		return l;
 	}
@@ -77,7 +76,7 @@ public class HAController implements IFloodlightModule {
 		// TODO Auto-generated method stub
 		logger = LoggerFactory.getLogger(HAController.class);
 		threadPoolService = context.getServiceImpl(IThreadPoolService.class);
-		ldHAService = context.getServiceImpl(ILDHAWorkerService.class);
+		haworker = context.getServiceImpl(IHAWorkerService.class);
 		setSysPath();
 		config = context.getConfigParams(this);
 		logger.info("Configuration parameters: {} {} ", new Object[] {config.toString(), config.get("nodeid")});
@@ -88,18 +87,24 @@ public class HAController implements IFloodlightModule {
 		// TODO Auto-generated method stub
 		
 		//Read config file and start the Election class with the right params.
-		AsyncElection ael = new AsyncElection( config.get("serverPort") ,config.get("clientPort"), config.get("nodeid") );
+		AsyncElection ael = new AsyncElection( config.get("serverPort") ,config.get("clientPort"), config.get("nodeid"), haworker );
 		
 		try{
-			
-			threadPoolService.getScheduledExecutor().schedule(ael, 5, TimeUnit.NANOSECONDS);
-			threadPoolService.getScheduledExecutor().schedule(new ControllerLogic(ael,config.get("nodeid"),ldHAService), 1, TimeUnit.NANOSECONDS);
+			Thread election = new Thread(ael);;
+			Thread clogic   = new Thread(new ControllerLogic(ael,config.get("nodeid")));
+			election.setDaemon(true);
+			clogic.setDaemon(true);
+			election.start();
+			clogic.start();
 			
 		} catch (Exception e){
 			logger.info("[Election] Was interrrupted! "+e.toString());
 			e.printStackTrace();
 		}
 		
+		logger.info("HAController is starting...");
+	
+		return;
 		
 	}
 	

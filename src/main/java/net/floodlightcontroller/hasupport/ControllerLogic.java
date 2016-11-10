@@ -5,7 +5,6 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import net.floodlightcontroller.hasupport.linkdiscovery.ILDHAWorkerService;
 import net.floodlightcontroller.hasupport.linkdiscovery.LDHAWorker;
 
 public class ControllerLogic implements Runnable {
@@ -13,16 +12,15 @@ public class ControllerLogic implements Runnable {
 	private static Logger logger = LoggerFactory.getLogger(ControllerLogic.class);
 	
 	private AsyncElection ael;
-	protected static ILDHAWorkerService ldHAService;
+	// registerService()
 	private final String none = new String("none");
 	private final String controllerID;
 	
 	public static final LDHAWorker ldworker = new LDHAWorker();
 
-	public ControllerLogic (AsyncElection ae, String cID, ILDHAWorkerService ldHAService ) {
+	public ControllerLogic (AsyncElection ae, String cID ) {
 		this.ael = ae;
-		this.controllerID = new String("C" + cID);
-		ControllerLogic.ldHAService = ldHAService;
+		this.controllerID = cID;
 	}
 
 	@Override
@@ -31,9 +29,9 @@ public class ControllerLogic implements Runnable {
 		try {
 		// 1. First get the leader
 			long start = System.nanoTime();
-			int timeout = 2;
+			int timeout = 50000;
 			while( timeout > 0 ){
-				if(! ael.getLeader().toString().equals(none ) ) {
+				if(! ael.getLeader().toString().equals(none) ) {
 					Long duration = (long) ((System.nanoTime() - start) / 1000000.000) ;
 					logger.info("[HAController MEASURE] Got Leader: "+ael.getLeader().toString() + "Elapsed :"+ duration.toString());
 					break;
@@ -42,17 +40,23 @@ public class ControllerLogic implements Runnable {
 					TimeUnit.SECONDS.sleep(1);
 				}
 			}
-			
-			while (!Thread.currentThread().isInterrupted()) {
-			// 2. Then publish after 1
-				ldHAService.publishHook();
-			// 3. Then Subscribe 5 s after 3
-				ldHAService.subscribeHook(this.controllerID);
-				TimeUnit.SECONDS.sleep(5);
+			while (!Thread.currentThread().isInterrupted()) {	
+				if ( ael.getLeader().toString().equals(this.controllerID) ) {
+					// LEADER initiates publish and subscribe
+					logger.info("[LEADER] 000000000000 Calling HOOKS 0000000000000");
+					
+					// 2. Then publish after 1
+						ael.publish();
+					// 3. Then Subscribe 5 s after 3
+						ael.subscribe(new String ("C" + this.controllerID));
+						TimeUnit.SECONDS.sleep(5);
+				}
 			}
 			
 		} catch (InterruptedException e) {
 			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 

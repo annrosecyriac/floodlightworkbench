@@ -8,7 +8,6 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,6 +18,7 @@ import net.floodlightcontroller.core.module.FloodlightModuleException;
 import net.floodlightcontroller.core.module.IFloodlightModule;
 import net.floodlightcontroller.core.module.IFloodlightService;
 import net.floodlightcontroller.hasupport.IHAWorker;
+import net.floodlightcontroller.hasupport.IHAWorkerService;
 import net.floodlightcontroller.linkdiscovery.ILinkDiscoveryListener;
 import net.floodlightcontroller.linkdiscovery.ILinkDiscoveryService;
 import net.floodlightcontroller.threadpool.IThreadPoolService;
@@ -29,10 +29,11 @@ import net.floodlightcontroller.threadpool.IThreadPoolService;
  * @author Om Kale
  *
  */
-public class LDHAWorker implements IHAWorker, IFloodlightModule, ILinkDiscoveryListener, ILDHAWorkerService {
+public class LDHAWorker implements IHAWorker, IFloodlightModule, ILinkDiscoveryListener {
 	protected static Logger logger = LoggerFactory.getLogger(LDHAWorker.class);
 	protected static ILinkDiscoveryService linkserv;
 	protected static IFloodlightProviderService floodlightProvider;
+	protected static IHAWorkerService haworker;
 	
 	protected Runnable dummyTask;
 	List<String> synLDUList = Collections.synchronizedList(new ArrayList<String>());
@@ -74,7 +75,6 @@ public class LDHAWorker implements IHAWorker, IFloodlightModule, ILinkDiscoveryL
      * This function is called in order to start pushing updates 
      * into the syncDB
      */
-	@Override
 	public boolean publishHook() {
 		// TODO Auto-generated method stub
 		try{
@@ -95,7 +95,6 @@ public class LDHAWorker implements IHAWorker, IFloodlightModule, ILinkDiscoveryL
 	}
 
 
-	@Override
 	public boolean subscribeHook(String controllerID) {
 		// TODO Auto-generated method stub
 		try {
@@ -128,26 +127,20 @@ public class LDHAWorker implements IHAWorker, IFloodlightModule, ILinkDiscoveryL
 	@Override
 	public Collection<Class<? extends IFloodlightService>> getModuleServices() {
 		// TODO Auto-generated method stub
-		Collection<Class<? extends IFloodlightService>> l =
-				new ArrayList<Class<? extends IFloodlightService>>();
-		l.add(ILDHAWorkerService.class);
-		return l;
+		return null;
 	}
 	
 	@Override
 	public Map<Class<? extends IFloodlightService>, IFloodlightService> getServiceImpls() {
-		Map<Class<? extends IFloodlightService>, IFloodlightService> m =
-				new HashMap<Class<? extends IFloodlightService>, IFloodlightService>();
-		// We are the class that implements the service
-		m.put(ILDHAWorkerService.class, this);
-		return m;
+		return null;
 	}
 	
 	@Override
 	public Collection<Class<? extends IFloodlightService>> getModuleDependencies() {
 		// TODO Auto-generated method stub
     	Collection<Class<? extends IFloodlightService>> l = new ArrayList<Class<? extends IFloodlightService>>();
-		l.add(IThreadPoolService.class);
+    	l.add(IHAWorkerService.class);
+    	l.add(IThreadPoolService.class);
 		return l;
 	}
 	
@@ -156,6 +149,7 @@ public class LDHAWorker implements IHAWorker, IFloodlightModule, ILinkDiscoveryL
 		// TODO Auto-generated method stub
 		linkserv = context.getServiceImpl(ILinkDiscoveryService.class);
 		threadPoolService = context.getServiceImpl(IThreadPoolService.class);
+		haworker = context.getServiceImpl(IHAWorkerService.class);
 		logger.info("LDHAWorker is init...");
 	}
 	
@@ -164,23 +158,8 @@ public class LDHAWorker implements IHAWorker, IFloodlightModule, ILinkDiscoveryL
 		// TODO Auto-generated method stub
 		logger = LoggerFactory.getLogger(LDHAWorker.class);
 		linkserv.addListener(this);
-		
+		haworker.registerService("LDHAWorker",this);
 		logger.info("LDHAWorker is starting...");
-
-		// To be started by the first switch connection
-//		dummyTask = new Runnable() {
-//			@Override
-//			public void run() {
-//				try {
-//					publishHook();
-//					subscribeHook(new String("C1"));
-//				} catch (Exception e) {
-//					logger.info("Exception in LDWorker.", e);
-//				}
-//			}
-//		};
-//			
-//		threadPoolService.getScheduledExecutor().scheduleAtFixedRate(dummyTask, 5, 5, TimeUnit.SECONDS);
 		
 		return;
 	}

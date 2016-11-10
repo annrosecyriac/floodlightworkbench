@@ -28,6 +28,8 @@ public class AsyncElection implements Runnable{
 	private static Logger logger = LoggerFactory.getLogger(AsyncElection.class);
 	private ZMQNode network;
 	
+	protected static IHAWorkerService haworker;
+	
 	private final String serverPort;
 	ArrayList<Thread> serverThreads = new ArrayList<Thread>();
 	private final String controllerID;
@@ -41,7 +43,7 @@ public class AsyncElection implements Runnable{
 		this.heartbeat     = new String("HEARTBEAT " + this.controllerID);
 	}
 	
-	public AsyncElection(String serverPort, String clientPort, String controllerID){
+	public AsyncElection(String serverPort, String clientPort, String controllerID, IHAWorkerService haw){
 		this.network       = new ZMQNode(serverPort,clientPort,controllerID);
 		this.serverPort    = serverPort;
 		this.controllerID  = controllerID;
@@ -49,6 +51,7 @@ public class AsyncElection implements Runnable{
 		this.leadermsg     = new String("LEADER "    + this.controllerID);
 		this.iwon 		   = new String("IWON "      + this.controllerID);
 		this.heartbeat     = new String("HEARTBEAT " + this.controllerID);
+		AsyncElection.haworker      = haw;
 	}
 	
 	/**
@@ -58,6 +61,8 @@ public class AsyncElection implements Runnable{
 	private String tempLeader         = new String("none");
 	private final String none         = new String("none");
 	private final String ack 		  = new String("ACK");
+	private final String publish 	  = new String("BPUBLISH");
+	private final String subscribe 	  = new String("KSUBSCRIBE");
 	private final String pulse        = new String("PULSE");
 	private final String you		  = new String("YOU?");
 	private final String no			  = new String("NO");
@@ -127,7 +132,6 @@ public class AsyncElection implements Runnable{
 		if (network.totalRounds <= 1){
 			noServers = 1;
 		} else {
-			// TODO CHANGE TO LOG10
 			noServers = (int) Math.ceil(Math.log10(network.totalRounds));
 		}
 		
@@ -144,6 +148,54 @@ public class AsyncElection implements Runnable{
 			}
 		} catch (Exception e){
 			logger.info("[Node] startServers was interrrupted! "+e.toString());
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void publish(){
+		try{
+			
+			for(HashMap.Entry<String, netState> entry: this.connectionDict.entrySet()){
+				if( this.connectionDict.get(entry.getKey()).equals(netState.ON) ){
+					
+					network.send( entry.getKey(), publish );
+					network.recv(entry.getKey());
+					
+					// If we get an ACK, that's good.
+					logger.info("[Publish] Received ACK from "+entry.getKey().toString());
+				}
+			}
+			
+			return;
+			
+		} catch (Exception e){
+			logger.debug("[Election] Error in PUBLISH!");
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void subscribe(String cid){
+		try{
+			
+			for(HashMap.Entry<String, netState> entry: this.connectionDict.entrySet()){
+				if( this.connectionDict.get(entry.getKey()).equals(netState.ON) ){
+					
+					String submsg = new String(subscribe + " " + cid);
+					
+					network.send( entry.getKey(), submsg );
+					network.recv(entry.getKey());
+					
+					// If we get an ACK, that's good.
+					logger.info("[Subscribe] Received ACK from "+entry.getKey().toString());
+				}
+			}
+			
+			return;
+			
+		} catch (Exception e){
+			logger.debug("[Election] Error in SUBSCRIBE!");
 			e.printStackTrace();
 		}
 		
