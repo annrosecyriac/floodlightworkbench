@@ -43,7 +43,7 @@ public class ControllerLogic implements Runnable {
 			while (!Thread.currentThread().isInterrupted()) {	
 				if ( ael.getLeader().toString().equals(this.controllerID) ) {
 					// LEADER initiates publish and subscribe
-					logger.info("[LEADER] 000000000000 Calling HOOKS 0000000000000");
+					logger.info("[LEADER] Calling Hooks...");
 					
 					// 2. Then publish after 1
 						ael.publish();

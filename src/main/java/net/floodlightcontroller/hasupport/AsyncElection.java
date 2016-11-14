@@ -16,9 +16,12 @@ import net.floodlightcontroller.hasupport.NetworkInterface.netState;
 /**
  * The Election class 
  * 
- * TODO: LEADER shouldn't be null, should be enum UNSET
- * before election.
- * Pre-declare all messages as private final strings.
+ * This class implements a simple self stabilizing,
+ * leader election protocol which is fault tolerant
+ * up to N nodes. The concept behind this implementation
+ * is described in Scott D. Stoller's 1997 paper 
+ * 'Leader Election in Distributed Systems with Crash Failures'
+ * FD: expireOldConnections() uses PULSE to detect failures.
  * 
  * @author Bhargav Srinivasan
  */
@@ -115,11 +118,11 @@ public class AsyncElection implements Runnable{
 					serverThreads.get(i).join(); 
 			}
 		} catch (InterruptedException ie){
-			logger.info("[Node] Was interrrupted! "+ie.toString());
+			logger.debug("[Node] Was interrrupted! "+ie.toString());
 			ie.printStackTrace();
 		} catch (Exception e){
 			e.printStackTrace();
-			logger.info("[Node] Exception in joinServerThreads");
+			logger.debug("[Node] Exception in joinServerThreads");
 		}
 		
 	}
@@ -142,12 +145,12 @@ public class AsyncElection implements Runnable{
 		try{
 			for (Integer i=0; i < noServers; i++){
 				Thread tx = new Thread (serverTh, "ZMQServers");
-				logger.info("Starting server "+i.toString()+"...");
+				logger.debug("Starting server "+i.toString()+"...");
 				tx.start();
 				serverThreads.add(tx);
 			}
 		} catch (Exception e){
-			logger.info("[Node] startServers was interrrupted! "+e.toString());
+			logger.debug("[Node] startServers was interrrupted! "+e.toString());
 			e.printStackTrace();
 		}
 		
@@ -161,9 +164,10 @@ public class AsyncElection implements Runnable{
 					
 					network.send( entry.getKey(), publish );
 					network.recv(entry.getKey());
+					AsyncElection.haworker.getService("LDHAWorker").publishHook();
 					
 					// If we get an ACK, that's good.
-					logger.info("[Publish] Received ACK from "+entry.getKey().toString());
+					logger.debug("[Publish] Received ACK from "+entry.getKey().toString());
 				}
 			}
 			
@@ -183,12 +187,14 @@ public class AsyncElection implements Runnable{
 				if( this.connectionDict.get(entry.getKey()).equals(netState.ON) ){
 					
 					String submsg = new String(subscribe + " " + cid);
+					logger.info("[Subscribe] Subscribing to: {}", new Object[]{cid});
 					
 					network.send( entry.getKey(), submsg );
 					network.recv(entry.getKey());
+					AsyncElection.haworker.getService("LDHAWorker").subscribeHook(cid);
 					
 					// If we get an ACK, that's good.
-					logger.info("[Subscribe] Received ACK from "+entry.getKey().toString());
+					logger.debug("[Subscribe] Received ACK from "+entry.getKey().toString());
 				}
 			}
 			
@@ -221,7 +227,7 @@ public class AsyncElection implements Runnable{
 						noSet.add(entry.getKey());
 					}
 					// If we get an ACK, that's good.
-					logger.info("[Election] Received HEARTBEAT ACK from "+entry.getKey().toString());
+					logger.debug("[Election] Received HEARTBEAT ACK from "+entry.getKey().toString());
 				}
 			}
 			
@@ -249,7 +255,7 @@ public class AsyncElection implements Runnable{
 					
 					network.send(entry.getKey(), iwon);
 					reply.add( network.recv(entry.getKey()) );
-					logger.info("Received reply for IWON from: "+entry.getKey().toString() + reply.toString());
+					logger.debug("Received reply for IWON from: "+entry.getKey().toString() + reply.toString());
 					
 				}
 			}
@@ -289,11 +295,11 @@ public class AsyncElection implements Runnable{
 			}
 			
 			if( acceptors.size() >= network.majority ){
-				logger.info("[Election sendLeaderMsg] Accepted leader: "+this.controllerID+" Majority: "+network.majority+"Acceptors: "+acceptors.toString());
+				logger.debug("[Election sendLeaderMsg] Accepted leader: "+this.controllerID+" Majority: "+network.majority+"Acceptors: "+acceptors.toString());
 				setLeader(network.controllerID);
 				this.currentState = ElectionState.COORDINATE;
 			} else {
-				logger.info("[Election sendLeaderMsg] Did not accept leader: "+this.controllerID+" Majority: "+network.majority+"Acceptors: "+acceptors.toString());
+				logger.debug("[Election sendLeaderMsg] Did not accept leader: "+this.controllerID+" Majority: "+network.majority+"Acceptors: "+acceptors.toString());
 				setLeader(none);
 				this.currentState = ElectionState.ELECT;
 			}
@@ -327,7 +333,7 @@ public class AsyncElection implements Runnable{
 					}
 					
 					// If we get an ACK, that's good.
-					logger.info("[Election] Received SETLEAD ACK from "+entry.getKey().toString());
+					logger.debug("[Election] Received SETLEAD ACK from "+entry.getKey().toString());
 				}
 			}
 			
@@ -358,14 +364,14 @@ public class AsyncElection implements Runnable{
 					if (! reply.equals(no) ){
 						leaderSet.add(reply);
 					} else if ( reply.equals(no) ){
-						logger.info("[Election] Check Leader: " + reply +" from "+entry.getKey().toString());
+						logger.debug("[Election] Check Leader: " + reply +" from "+entry.getKey().toString());
 						continue;
 					}
 					
 				}
 			}
 			
-			logger.info("[Election checkForLeader] Leader Set: "+leaderSet.toString());
+			logger.debug("[Election checkForLeader] Leader Set: "+leaderSet.toString());
 			
 			// Remove blank objects from set, if any.
 			if ( leaderSet.contains(new String("")) ){
@@ -379,7 +385,7 @@ public class AsyncElection implements Runnable{
 			
 			// Remove null objects from set, if any.
 			if( leaderSet.contains(null) ){
-				logger.info("[Election] Leader Set contains null");
+				logger.debug("[Election] Leader Set contains null");
 				leaderSet.remove(null);
 			}
 			
@@ -389,11 +395,11 @@ public class AsyncElection implements Runnable{
 										.findFirst().get()); 
 			} else if ( leaderSet.size() > 1 ){
 				setLeader(none);
-				logger.info("[Election checkForLeader] SPLIT BRAIN!!");
-				logger.info("[Election checkForLeader] Current Leader is none");
+				logger.debug("[Election checkForLeader] SPLIT BRAIN!!");
+				logger.debug("[Election checkForLeader] Current Leader is none");
 			} else if ( leaderSet.size() < 1 ){
 				setLeader(none);
-				logger.info("[Election checkForLeader] Current Leader is none "+ this.leader.toString() );
+				logger.debug("[Election checkForLeader] Current Leader is none "+ this.leader.toString() );
 			}
 			
 			//TODO This helps you in the case of two nodes active in a set of 4,
@@ -438,7 +444,7 @@ public class AsyncElection implements Runnable{
 			}
 		}
 		
-		logger.info("Active controllers: "+activeCIDs.toString()+"ConnectDict Keys: "+connectDictKeys.toString());
+		logger.debug("Active controllers: "+activeCIDs.toString()+"ConnectDict Keys: "+connectDictKeys.toString());
 		
 		// Find the current active maxNode.
 		
@@ -521,7 +527,7 @@ public class AsyncElection implements Runnable{
 		this.electionLogic();
 		
 		if( this.leader.equals(network.controllerID) ){
-			logger.info("[Election] I WON THE ELECTION!");
+			logger.debug("[Election] I WON THE ELECTION!");
 			this.sendIWon();
 			this.sendLeaderMsg();
 			if(this.leader.equals(network.controllerID)) {
@@ -646,10 +652,10 @@ public class AsyncElection implements Runnable{
 			n1.join();
 			
 		} catch (InterruptedException ie){
-			logger.info("[Network] Was interrrupted! "+ie.toString());
+			logger.debug("[Network] Was interrrupted! "+ie.toString());
 			ie.printStackTrace();
 		} catch (Exception e){
-			logger.info("[Network] Was interrrupted! "+e.toString());
+			logger.debug("[Network] Was interrrupted! "+e.toString());
 			e.printStackTrace();
 		}
 	}

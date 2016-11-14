@@ -5,7 +5,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -28,6 +27,19 @@ import net.floodlightcontroller.core.module.IFloodlightModule;
 import net.floodlightcontroller.core.module.IFloodlightService;
 import net.floodlightcontroller.hasupport.ISyncAdapter;
 import net.floodlightcontroller.storage.IStorageSourceService;
+
+/**
+ * This class gets the updates from the Filter Queue
+ * and puts them into the SyncDB.
+ * The primary key fields are MD5 hashed and the md5hashes are
+ * stored under the controller ID which published them. Now
+ * each controller can exchange only the md5hashes and stay up 
+ * to date, and sync the actual update if needed.
+ * 
+ * @author Om Kale
+ *
+ */
+
 
 public class LDSyncAdapter implements ISyncAdapter, IFloodlightModule, IStoreListener<String>, IRPCListener {
 
@@ -84,7 +96,7 @@ public class LDSyncAdapter implements ISyncAdapter, IFloodlightModule, IStoreLis
 	        			continue;
 	        		}
 		        			
-	        		logger.info("+++++++++++++ Retriving old update from DB: Key:{}, Value:{} ", 
+	        		logger.debug("+++++++++++++ Retriving old update from DB: Key:{}, Value:{} ", 
 	                    new Object[] {
 	                            cmd5Hash.toString(), 
 	                            oldUpdates.toString()
@@ -95,17 +107,17 @@ public class LDSyncAdapter implements ISyncAdapter, IFloodlightModule, IStoreLis
 					updateMap = myMapper.readValue(oldUpdates.toString(), typeRef);		
 					
 				    String oldOp = updateMap.get(highfields[0]);
-				    logger.info("++++OLD OP: {}", new Object[] {oldOp});
+				    logger.debug("++++OLD OP: {}", new Object[] {oldOp});
 				    String opList = ldhautils.appendUpdate(oldOp, newUpdateMap.get(highfields[0]) );
 					updateMap.put(highfields[0], opList); //update high freq fields
 					
 					String oldLatency = updateMap.get(highfields[1]);
-				    logger.info("++++OLD LATENCY: {}", new Object[] {oldLatency});
+				    logger.debug("++++OLD LATENCY: {}", new Object[] {oldLatency});
 				    String latList = ldhautils.appendUpdate(oldLatency, newUpdateMap.get(highfields[1]));
 					updateMap.put(highfields[1], latList); //update high freq fields
 					
 					String oldTimestamp = updateMap.get(highfields[2]);
-					logger.info("++++OLD TS: {}", new Object[] {oldTimestamp});
+					logger.debug("++++OLD TS: {}", new Object[] {oldTimestamp});
 					Long ts2 = new Long(Instant.now().getEpochSecond());
 					Long nano2 = new Long(Instant.now().getNano());
 					String tmList = ldhautils.appendUpdate(oldTimestamp, ts2.toString()+nano2.toString());
@@ -123,9 +135,9 @@ public class LDSyncAdapter implements ISyncAdapter, IFloodlightModule, IStoreLis
 	        			
 	        			if ( collatedcmd5.equals(none) ) {
 	        				collatedcmd5 = cmd5Hash;
-	        				logger.info("Collated CMD5: {} ", new Object [] {collatedcmd5.toString()});
+	        				logger.debug("Collated CMD5: {} ", new Object [] {collatedcmd5.toString()});
 	        			} else {
-	        				logger.info("================ Append update to HashMap ================");
+	        				logger.debug("================ Append update to HashMap ================");
 	        				collatedcmd5 = ldhautils.appendUpdate(collatedcmd5, cmd5Hash);
 	        			}
 	        			
@@ -133,20 +145,20 @@ public class LDSyncAdapter implements ISyncAdapter, IFloodlightModule, IStoreLis
 	        			
 	        		} catch (SyncException se) {
 	        			// TODO Auto-generated catch block
-	        			logger.info("[LDSync] Exception: sync packJSON!");
+	        			logger.debug("[LDSync] Exception: sync packJSON!");
 	        			se.printStackTrace();
 	        		} catch (Exception e) {
-	        			logger.info("[LDSync] Exception: packJSON!");
+	        			logger.debug("[LDSync] Exception: packJSON!");
 	        			e.printStackTrace();
 	        		}
 	        	}
 		
 			} catch (SyncException se) {
     			// TODO Auto-generated catch block
-    			logger.info("[LDSync] Exception: sync packJSON!");
+    			logger.debug("[LDSync] Exception: sync packJSON!");
     			se.printStackTrace();
     		} catch (Exception e) {
-    			logger.info("[LDSync] Exception: packJSON!");
+    			logger.debug("[LDSync] Exception: packJSON!");
     			e.printStackTrace();
 	        }
 		}
@@ -243,17 +255,13 @@ public class LDSyncAdapter implements ISyncAdapter, IFloodlightModule, IStoreLis
 	        String k = keys.next();
 	        try {
 	        	String val = storeLD.get(k).getValue();
-				logger.info("+++++++++++++ Retriving value from DB: Key:{}, Value:{}, Type: {}", 
+				logger.debug("+++++++++++++ Retriving value from DB: Key:{}, Value:{}, Type: {}", 
 	                    new Object[] {
 	                            k.toString(), 
 	                            val.toString(), 
 	                            type.name()
 	                        }
 	                    );
-	            if(type.name().equals("REMOTE")){
-	              //  String info = value;
-	               // logger.info("++++++++++++++++ REMOTE: Key:{}, Value:{}", k, info);
-	            }
 	        } catch (SyncException e) {
 	            e.printStackTrace();
 	        }

@@ -4,7 +4,6 @@ package net.floodlightcontroller.hasupport.linkdiscovery;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -35,7 +34,6 @@ public class LDHAWorker implements IHAWorker, IFloodlightModule, ILinkDiscoveryL
 	protected static IFloodlightProviderService floodlightProvider;
 	protected static IHAWorkerService haworker;
 	
-	protected Runnable dummyTask;
 	List<String> synLDUList = Collections.synchronizedList(new ArrayList<String>());
 	protected static IThreadPoolService threadPoolService;
 	private static final LDFilterQueue myLDFilterQueue = new LDFilterQueue(); 
@@ -67,7 +65,7 @@ public class LDHAWorker implements IHAWorker, IFloodlightModule, ILinkDiscoveryL
 			jsonInString = parser.parseChunk(chunk);
 		}
 
-		logger.info("\n[Assemble Update] JSON String: {}", new Object[] {jsonInString});
+		logger.debug("[Assemble Update] JSON String: {}", new Object[] {jsonInString});
 		return jsonInString;
 	}
 
@@ -79,7 +77,7 @@ public class LDHAWorker implements IHAWorker, IFloodlightModule, ILinkDiscoveryL
 		// TODO Auto-generated method stub
 		try{
 			synchronized (synLDUList){
-				logger.info("Printing Updates {}: ",new Object[]{synLDUList});
+				logger.info("[Publish] Printing Updates {}: ",new Object[]{synLDUList});
 				List<String> updates = assembleUpdate();
 				for(String update : updates){
 					myLDFilterQueue.enqueueForward(update);
@@ -89,11 +87,15 @@ public class LDHAWorker implements IHAWorker, IFloodlightModule, ILinkDiscoveryL
 			}
 			return true;
 		} catch (Exception e){
-			logger.info("[LDHAWorker] An exception occoured!");
+			logger.debug("[LDHAWorker] An exception occoured!");
 			return false;
 		}
 	}
 
+	/**
+	 * This function is used to subscribe to updates from the syncDB, and 
+	 * stay in sync. Can be used to unpack the updates, if needed.
+	 */
 
 	public boolean subscribeHook(String controllerID) {
 		// TODO Auto-generated method stub

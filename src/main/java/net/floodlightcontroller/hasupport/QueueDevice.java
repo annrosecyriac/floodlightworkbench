@@ -53,7 +53,7 @@ public class QueueDevice implements Runnable{
 			ZMQ.Socket serverSide = zmqcontext.socket(ZMQ.DEALER);
 			serverSide.bind("tcp://0.0.0.0:"+this.serverPort.toString());
 			
-			logger.info("Starting ZMQueue device...");
+			logger.info("Starting ZMQ Queue Device...");
 			
 			/**
 			 * This is an infinite loop to run the QueueDevice!

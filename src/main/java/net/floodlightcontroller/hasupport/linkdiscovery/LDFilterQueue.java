@@ -37,7 +37,7 @@ public class LDFilterQueue implements IFilterQueue {
 			String newMD5 = new String();
 			LDHAUtils myMD5 = new LDHAUtils();
 			newMD5 = myMD5.calculateMD5Hash(value);
-			logger.info("[FilterQ] The MD5: {} The Value {}", new Object [] {newMD5,value});
+			logger.debug("[FilterQ] The MD5: {} The Value {}", new Object [] {newMD5,value});
 			if( (!myMap.containsKey(newMD5)) && (!value.equals(null)) ){
 				filterQueue.offer(value);
 				myMap.put(newMD5, value);
@@ -46,7 +46,7 @@ public class LDFilterQueue implements IFilterQueue {
 	
 		} 
 		catch (Exception e){
-			logger.info("[FilterQ] Exception: enqueueFwd!");
+			logger.debug("[FilterQ] Exception: enqueueFwd!");
 			e.printStackTrace();
 			return false;
 		}
@@ -67,11 +67,11 @@ public class LDFilterQueue implements IFilterQueue {
 				filterQueue.drainTo(LDupds);
 			}
 			if(! LDupds.isEmpty() ) {
-				logger.info("[FilterQ] The update after drain: {} ", new Object [] {LDupds.toString()});
+				logger.debug("[FilterQ] The update after drain: {} ", new Object [] {LDupds.toString()});
 				syncAdapter.packJSON(LDupds);
 				return true;
 			} else {
-				logger.info("The linked list is empty");
+				logger.info("[FilterQ] The linked list is empty");
 				return false;
 			}	
 		} catch (Exception e){
@@ -116,13 +116,15 @@ public class LDFilterQueue implements IFilterQueue {
 			}
 			
 			if(! LDupds.isEmpty() ) {
-				logger.info("[ReverseFilterQ] The update after drain: {} ", new Object [] {LDupds.toString()});
+				logger.debug("[ReverseFilterQ] The update after drain: {} ", new Object [] {LDupds.toString()});
 				return LDupds;
+			} else {
+				logger.info("[ReverseFilterQ] The linked list is empty");
 			}
 			return LDupds;
 			
 		} catch (Exception e){
-			logger.info("[ReverseFilterQ] Dequeue Forward failed!");
+			logger.debug("[ReverseFilterQ] Dequeue Forward failed!");
 			e.printStackTrace();
 		}
 		

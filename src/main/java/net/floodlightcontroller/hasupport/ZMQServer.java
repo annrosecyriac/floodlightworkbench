@@ -49,7 +49,7 @@ public class ZMQServer implements Runnable{
 		// TODO Auto-generated method stub
 		ZMQ.Socket serverSocket = zmqcontext.socket(ZMQ.REP);
 		
-		//logger.info("Server Port: "+ this.serverPort.toString());
+		logger.info("Starting ZMQ Server on port: "+ this.serverPort.toString());
 		
 		serverSocket.connect("tcp://"+this.serverPort.toString());
 	    serverSocket.setReceiveTimeOut(this.socketTimeout);
@@ -59,7 +59,6 @@ public class ZMQServer implements Runnable{
 			try{
 				byte[] rep = serverSocket.recv();
 				String stg = new String(rep);
-				//logger.info("Server received: "+stg.toString());
 				String reply = processServerMessage(stg);
 				serverSocket.send(reply);
 			} catch (ZMQException ze){
@@ -82,7 +81,6 @@ public class ZMQServer implements Runnable{
 	 */
 
 	private String processServerMessage(String mssg) {
-		// TODO Auto-generated method stub
 		// Let's optimize the string comparision time, in order to 
 		// get the best perf: 
 		// 1) using first 1 chars of 'stg' to find out what
@@ -96,18 +94,18 @@ public class ZMQServer implements Runnable{
 		try{
 			if(cmp == 'I') {
 				
-				//logger.info("[ZMQServer] Received IWon message: " + mssg.toString());
+				logger.debug("[ZMQServer] Received IWon message: " + mssg.toString());
 				String iw = String.valueOf(mssg.charAt(5));
 				this.aelection.setTempLeader(iw);
 				return ack;
 				
 			} else if (cmp == 'L') {
 				
-				//logger.info("[ZMQServer] Received LEADER message: " + mssg.toString());
+				logger.debug("[ZMQServer] Received LEADER message: " + mssg.toString());
 				
 				String le = String.valueOf(mssg.charAt(7));
 				
-				//logger.info("[ZMQServer] Get tempLeader: "+this.aelection.gettempLeader()+" "+le);
+				logger.debug("[ZMQServer] Get tempLeader: "+this.aelection.gettempLeader()+" "+le);
 				
 				if( this.aelection.gettempLeader().equals(le) ) {
 					return lead;
@@ -117,11 +115,11 @@ public class ZMQServer implements Runnable{
 				
 			} else if (cmp == 'S') {
 				
-				//logger.info("[ZMQServer] Received SETLEAD message: " + mssg.toString());
+				logger.debug("[ZMQServer] Received SETLEAD message: " + mssg.toString());
 				
 				String setl = String.valueOf(mssg.charAt(8));
 				
-				//logger.info("[ZMQServer] Get Leader: "+this.aelection.getLeader()+" "+setl);
+				logger.debug("[ZMQServer] Get Leader: "+this.aelection.getLeader()+" "+setl);
 				
 				if(! this.aelection.gettempLeader().equals(this.controllerID) ) {
 					if ( this.aelection.gettempLeader().equals(setl) ) {
@@ -136,7 +134,7 @@ public class ZMQServer implements Runnable{
 				
 			} else if (cmp == 'Y'){
 				
-				//logger.info("[ZMQServer] Received YOU? message: " + mssg.toString());
+				logger.debug("[ZMQServer] Received YOU? message: " + mssg.toString());
 				
 				if( this.aelection.getLeader().equals(this.controllerID) ) {
 					return this.controllerID;
@@ -146,7 +144,7 @@ public class ZMQServer implements Runnable{
 				
 			} else if (cmp == 'H') {
 				
-				//logger.info("[ZMQServer] Received HEARTBEAT message: " + mssg.toString());
+				logger.debug("[ZMQServer] Received HEARTBEAT message: " + mssg.toString());
 				
 				String hb = String.valueOf(mssg.charAt(10));
 				if ( this.aelection.getLeader().equals(hb) ) {
@@ -157,7 +155,7 @@ public class ZMQServer implements Runnable{
 				
 			} else if (cmp == 'P') {
 				
-				//logger.info("[ZMQServer] Received PULSE message: " + mssg.toString());
+				logger.debug("[ZMQServer] Received PULSE message: " + mssg.toString());
 				return ack;
 			
 			} else if (cmp == 'B') {
@@ -175,9 +173,9 @@ public class ZMQServer implements Runnable{
 				
 			}
 		} catch (StringIndexOutOfBoundsException si) {
-			
+			si.printStackTrace();
 	    } catch (Exception e){
-			//e.printStackTrace();
+			e.printStackTrace();
 		}
 		
 		return dc;
