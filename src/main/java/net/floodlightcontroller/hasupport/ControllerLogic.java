@@ -29,25 +29,24 @@ public class ControllerLogic implements Runnable {
 		try {
 		// 1. First get the leader
 			long start = System.nanoTime();
-			int timeout = 50000;
-			while( timeout > 0 ){
+			while(! Thread.currentThread().isInterrupted() ){
 				if(! ael.getLeader().toString().equals(none) ) {
 					Long duration = (long) ((System.nanoTime() - start) / 1000000.000) ;
 					logger.info("[HAController MEASURE] Got Leader: "+ael.getLeader().toString() + "Elapsed :"+ duration.toString());
 					break;
-				} else {
-					timeout = timeout - 1;
-					TimeUnit.SECONDS.sleep(1);
 				}
 			}
+			
 			while (!Thread.currentThread().isInterrupted()) {	
 				if ( ael.getLeader().toString().equals(this.controllerID) ) {
 					// LEADER initiates publish and subscribe
 					logger.info("[LEADER] Calling Hooks...");
 					
-					// 2. Then publish after 1
+					// 2. Then Publish, meaning ask all nodes to call publish hook
 						ael.publish();
-					// 3. Then Subscribe 5 s after 3
+					// 3. Then Subscribe, ask all nodes to subscribe to the leader
+					//    can be modified to subscribe to updates from all other nodes as well by calling
+					//    this in a for loop.
 						ael.subscribe(new String ("C" + this.controllerID));
 						TimeUnit.SECONDS.sleep(5);
 				}
