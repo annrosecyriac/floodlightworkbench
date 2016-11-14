@@ -46,7 +46,6 @@ public class ZMQServerTest {
 		tc.send("LEADER 2");
 		
 		assertEquals(ae.gettempLeader(),"2");
-		ae.setTempLeader("none");
 	}
 	
 	@Test
@@ -57,8 +56,6 @@ public class ZMQServerTest {
 		
 		
 		assertEquals(ae.getLeader(),"2");
-		ae.setTempLeader("none");
-		ae.setLeader("none");
 	}
 	
 	@Test
@@ -88,10 +85,20 @@ public class ZMQServerTest {
 		tc.send("SETLEAD 2");
 		tc.send("LEADER 2");
 		
-		assertEquals(ae.getLeader(),"2");
-		ae.setTempLeader("none");
-		ae.setLeader("none");
+		assertEquals(ae.getLeader(),"none");
 	}
+	
+	@Test
+	public void testSetLeaderIlleagal2() {
+		
+		tc.send("IWON 2");
+		tc.send("LEADER 2");
+		tc.send("SETLEAD 3");
+		
+		assertEquals(ae.getLeader(),"none");
+	}
+	
+	
 	
 	@AfterClass
 	public static void tearDown() throws Exception {

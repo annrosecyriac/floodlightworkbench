@@ -24,12 +24,14 @@ public class ZMQServer implements Runnable{
 	private final String no       = new String ("NO");
 	private final String lead     = new String ("LEADOK");
 	private final String dc       = new String ("DONTCARE");
+	private final String none     = new String ("none");
 	
 	// Decide the socket timeout value based on how fast you think the leader should
 	// respond and also how far apart the actual nodes are placed. If you are trying
 	// to communicate with servers far away, then anything upto 10s would be a good value.
 	
 	public final Integer socketTimeout = new Integer(500);
+	
 	
 	/**
 	 * 
@@ -110,6 +112,8 @@ public class ZMQServer implements Runnable{
 				if( this.aelection.gettempLeader().equals(le) ) {
 					return lead;
 				} else {
+					this.aelection.setTempLeader(none);
+					this.aelection.setLeader(none);
 					return no;
 				}
 				
@@ -124,11 +128,16 @@ public class ZMQServer implements Runnable{
 				if(! this.aelection.gettempLeader().equals(this.controllerID) ) {
 					if ( this.aelection.gettempLeader().equals(setl) ) {
 						this.aelection.setLeader(setl);
+						this.aelection.setTempLeader(none);
 						return ack;
 					} else {
+						this.aelection.setTempLeader(none);
+						this.aelection.setLeader(none);
 						return no;
 					}
-				} else {	
+				} else {
+					this.aelection.setTempLeader(none);
+					this.aelection.setLeader(none);
 					return no;
 				}
 				

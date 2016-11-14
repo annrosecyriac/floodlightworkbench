@@ -21,7 +21,21 @@ import net.floodlightcontroller.hasupport.NetworkInterface.netState;
  * up to N nodes. The concept behind this implementation
  * is described in Scott D. Stoller's 1997 paper 
  * 'Leader Election in Distributed Systems with Crash Failures'
+ * The ALE1 & ALE2' requirements are being followed.
+ * 
+ * We have an additional constraint that AT LEAST 51% of the
+ * nodes must be fully connected before the election happens,
+ * this is in order to ensure that there will be at least one 
+ * group which will produce a majority response to elect one 
+ * leader. However, the drawback of this system is that 51%
+ * of the nodes have to be connected in order for the election
+ * to begin. (transition from CONNECT -> ELECT)
+ * 
  * FD: expireOldConnections() uses PULSE to detect failures.
+ * 
+ * Possible improvements:
+ * Messages between nodes are being sent sequentially in a for loop,
+ * this can be modified to happen in parallel.
  * 
  * @author Bhargav Srinivasan
  */
